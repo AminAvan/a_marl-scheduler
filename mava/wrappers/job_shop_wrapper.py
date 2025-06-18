@@ -122,3 +122,8 @@ class JumanjiMarlWrapper(Wrapper, ABC):
 class JobShopWrapper(JumanjiMarlWrapper):
     """Multi-agent wrapper for the JobShop environment inspired by
     'CleanerWrapper(JumanjiMarlWrapper)' in mava/wrappers/jumanji.py ."""
+
+    def __init__(self, env: JobShop, add_global_state: bool = False):
+        """inspired by 'def __init__(self, env: Cleaner,...' in mava/wrappers/jumanji.py"""
+        super().__init__(env, add_global_state)
+        self._env: JobShop
