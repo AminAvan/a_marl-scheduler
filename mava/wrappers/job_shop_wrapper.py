@@ -117,3 +117,8 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def action_dim(self) -> chex.Array:
         """Get the actions dim for each agent."""
         return int(self._env.action_spec.num_values[0])
+
+
+class JobShopWrapper(JumanjiMarlWrapper):
+    """Multi-agent wrapper for the JobShop environment inspired by
+    'CleanerWrapper(JumanjiMarlWrapper)' in mava/wrappers/jumanji.py ."""
