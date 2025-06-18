@@ -12,4 +12,3 @@ from jumanji.environments.packing.job_shop import JobShop
 
 env = JobShop()
 print(type(env))
-print(env.name)
