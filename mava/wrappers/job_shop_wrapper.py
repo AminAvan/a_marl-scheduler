@@ -127,3 +127,30 @@ class JobShopWrapper(JumanjiMarlWrapper):
         """inspired by 'def __init__(self, env: Cleaner,...' in mava/wrappers/jumanji.py"""
         super().__init__(env, add_global_state)
         self._env: JobShop
+
+    def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
+        """copied from 'def modify_timestep(...)' in mava/wrappers/jumanji.py"""
+        observation = Observation(
+            agents_view=timestep.observation.agents_view.astype(float),
+            action_mask=timestep.observation.action_mask,
+            step_count=jnp.repeat(timestep.observation.step_count, self.num_agents),
+        )
+        reward = jnp.repeat(timestep.reward, self.num_agents)
+        discount = jnp.repeat(timestep.discount, self.num_agents)
+        metrics: Dict[str, Any] = {"env_metrics": {}}
+        return timestep.replace(
+            observation=observation, reward=reward, discount=discount, extras=metrics
+        )
+
+    @cached_property
+    def observation_spec(
+            self,
+    ) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
+        """copied from 'def observation_spec(...)' in mava/wrappers/jumanji.py"""
+        # need to cast the agents view and global state to floats as we do in modify timestep
+        inner_spec = super().observation_spec
+        spec = inner_spec.replace(agents_view=inner_spec.agents_view.replace(dtype=float))
+        if self.add_global_state:
+            spec = spec.replace(global_state=inner_spec.global_state.replace(dtype=float))
+
+        return spec
