@@ -8,7 +8,7 @@ import jax.numpy as jnp
 from jumanji import specs
 from jumanji.env import Environment
 
-from jumanji.environments.routing.job_shop import JobShop
+from jumanji.environments.packing.job_shop import JobShop
 
 env = JobShop()
 print(type(env))
