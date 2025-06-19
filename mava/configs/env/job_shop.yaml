@@ -17,4 +17,4 @@ implicit_agent_id: True
 log_win_rate: True
 
 kwargs:
-  time_limit: 65 # derived from "num_epochs: 65" at https://github.com/instadeepai/jumanji/blob/main/jumanji/training/configs/env/job_shop.yaml
+  {} # time_limit: 65 # derived from "num_epochs: 65" at https://github.com/instadeepai/jumanji/blob/main/jumanji/training/configs/env/job_shop.yaml
