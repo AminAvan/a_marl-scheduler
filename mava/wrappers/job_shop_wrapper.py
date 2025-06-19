@@ -2,7 +2,6 @@
 # that the source is located in
 # https://github.com/instadeepai/jumanji/tree/main/jumanji/environments/packing/job_shop
 
-
 from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Any, Dict, Tuple, Union
