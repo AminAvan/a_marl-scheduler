@@ -20,8 +20,6 @@ from jumanji.wrappers import Wrapper
 
 from mava.types import Observation, ObservationGlobalState, State
 
-env = JobShop()
-print(type(env))
 
 def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
     """Aggregate individual rewards across agents."""
