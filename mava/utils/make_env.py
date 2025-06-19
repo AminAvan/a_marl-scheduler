@@ -26,6 +26,12 @@ from jaxmarl.environments.smax import map_name_to_scenario
 from jumanji.environments.routing.cleaner.generator import (
     RandomGenerator as CleanerRandomGenerator,
 )
+
+## added by amin
+from jumanji.environments.packing.job_shop.generator import (
+    RandomGenerator as JobShopRandomGenerator,
+)
+
 from jumanji.environments.routing.connector.generator import (
     RandomWalkGenerator as ConnectorRandomGenerator,
 )
@@ -57,6 +63,7 @@ from mava.wrappers import (
     SmaxWrapper,
     UoeWrapper,
     VectorConnectorWrapper,
+    JobShopWrapper, ## added by amin
     async_multiagent_worker,
 )
 
@@ -70,6 +77,7 @@ _jumanji_registry = {
         "wrapper": VectorConnectorWrapper,
     },
     "Cleaner": {"generator": CleanerRandomGenerator, "wrapper": CleanerWrapper},
+    "JobShop": {"generator": JobShopRandomGenerator, "wrapper": JobShopWrapper},
 }
 
 # Registry mapping environment names directly to the corresponding wrapper classes.
