@@ -1,6 +1,4 @@
-## this is a file for wrapping JobShop from jumanji into Mava environment for running JobShop with customized MARL
-
-# ---Environment Configs---
+# ---Environment Configs---#
 defaults:
   - _self_
   - scenario: ??? # [????]
@@ -19,4 +17,4 @@ implicit_agent_id: False
 log_win_rate: False
 
 kwargs:
-  time_limit: 65
+  time_limit: 65 # derived from "num_epochs: 65" at https://github.com/instadeepai/jumanji/blob/main/jumanji/training/configs/env/job_shop.yaml
