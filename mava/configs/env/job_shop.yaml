@@ -1,7 +1,7 @@
 # ---Environment Configs---#
 defaults:
   - _self_
-  - scenario: ??? # [????]
+  - scenario: jobshop-test-scenario # [jobshop-test-scenario]
 
 env_name: JobShop  # Used for logging purposes.
 

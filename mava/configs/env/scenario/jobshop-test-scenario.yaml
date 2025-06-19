@@ -1,0 +1,12 @@
+# The config of the tiny-2ag environment
+name: JobShop-v0
+task_name: jobshop-test-scenario
+
+task_config:
+  num_jobs: 5 # number of jobs that need to be scheduled.
+  num_machines: 4 # number of machines that the jobs can be scheduled on.
+  max_num_ops: 4 # maximum number of operations for any given job.
+  max_op_duration: 4 # maximum processing time of any given operation.
+  # the above values is derived from 'jumanji/environments/packing/job_shop/generator.py'
+env_kwargs:
+  {}  # there are no scenario specific env_kwargs for this env
