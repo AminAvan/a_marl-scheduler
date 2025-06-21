@@ -6,9 +6,9 @@ It seems that the environment which defines in jumanji.py are already implemente
 inherently; thus, their wrappers functions and classes does not work for my JobShop environment.
 """
 
-import jumanji
-from jumanji.registration import register
+from jumanji.registration import REGISTRY
 from jumanji.environments.packing.job_shop import JobShop as _BaseJobShop
+from jumanji.wrappers.time_limit import TimeLimit
 from typing import Optional
 
 def job_shop_factory(
@@ -16,15 +16,15 @@ def job_shop_factory(
     generator,
     time_limit: Optional[int] = None,
     **kwargs
-) -> jumanji.env.Environment:
+):
     env = _BaseJobShop(generator=generator, **kwargs)
     if time_limit is not None:
         env = TimeLimit(env, step_limit=time_limit)
     return env
 
-# **THIS** line actually registers your factory under "job_shop"
-register("JobShop-v0", job_shop_factory)
-
+# Directly override the built-in entry
+REGISTRY["JobShop-v0"] = job_shop_factory
+# ————————————————————————————————
 # ————————————————————————————————————————————————————————————————
 
 from abc import ABC, abstractmethod
