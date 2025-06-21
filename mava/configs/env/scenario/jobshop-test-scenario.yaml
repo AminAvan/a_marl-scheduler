@@ -9,4 +9,4 @@ task_config:
   max_op_duration: 4 # maximum processing time of any given operation.
   # the above values is derived from 'jumanji/environments/packing/job_shop/generator.py'
 env_kwargs:
-  time_limit: 65  # there are no scenario specific env_kwargs for this env
+  {} # time_limit: 65  # since original jumanji-jobshop constructor does not have time_limit kwarg, then I remove it.
