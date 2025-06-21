@@ -11,18 +11,19 @@ from jumanji.registration import register
 from jumanji.environments.packing.job_shop import JobShop as _BaseJobShop
 from typing import Optional
 
-@register("job_shop")
 def job_shop_factory(
     *,
-    generator,                   # your JobShop Generator instance
+    generator,
     time_limit: Optional[int] = None,
-    **kwargs                     # num_jobs, num_machines, etc.
+    **kwargs
 ) -> jumanji.env.Environment:
-    """Override Jumanji’s registration so we accept time_limit here."""
     env = _BaseJobShop(generator=generator, **kwargs)
     if time_limit is not None:
         env = TimeLimit(env, step_limit=time_limit)
     return env
+
+# **THIS** line actually registers your factory under "job_shop"
+register("job_shop", job_shop_factory)
 
 # ————————————————————————————————————————————————————————————————
 
