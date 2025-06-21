@@ -2,13 +2,18 @@
 
 # ─── 0) Registry hack ──────────────────────────────────────────────────────────
 from jumanji.registration import _REGISTRY, EnvSpec
-from typing      import Optional
 
-# Import the original single-agent JobShop base
+# No direct import of the class here yet
+
+# 0.a) Mutate the existing EnvSpec to point at your subclass by string
+_spec: EnvSpec = _REGISTRY["JobShop-v0"]
+_spec.entry_point = "mava.wrappers.job_shop_wrapper:TimeLimitedJobShop"
+# _spec.kwargs stays as-is, so Hydra’s passed-in time_limit ends up in the constructor
+
+# 0.b) Now import the real base and build your subclass
 from jumanji.environments.packing.job_shop import JobShop as _BaseJobShop
 from jumanji.types import StepType, TimeStep
 
-# 0.a) Subclass to inject time_limit logic
 class TimeLimitedJobShop(_BaseJobShop):
     def __init__(
         self,
@@ -18,7 +23,7 @@ class TimeLimitedJobShop(_BaseJobShop):
         num_machines: int,
         max_num_ops: int,
         max_op_duration: int,
-        time_limit: Optional[int] = None,   # new param
+        time_limit: int | None = None,
     ):
         super().__init__(
             generator=generator,
@@ -31,17 +36,9 @@ class TimeLimitedJobShop(_BaseJobShop):
 
     def step(self, state, action):
         next_state, ts = super().step(state, action)
-        # enforce horizon if requested
-        if self._time_limit is not None:
-            # step_count is in ts.observation.step_count
-            if ts.observation.step_count >= self._time_limit:
-                ts = ts.replace(step_type=StepType.LAST)
+        if self._time_limit is not None and ts.observation.step_count >= self._time_limit:
+            ts = ts.replace(step_type=StepType.LAST)
         return next_state, ts
-
-# 0.b) Mutate the existing EnvSpec so Jumanji.make("JobShop-v0", time_limit=…) uses our subclass
-_spec: EnvSpec = _REGISTRY["JobShop-v0"]
-_spec.entry_point = TimeLimitedJobShop
-# _spec.kwargs is left alone so generator, plus Hydra’s time_limit, flow through
 
 # ─── 1) Usual imports for your MARL wrapper ────────────────────────────────────
 from abc            import ABC, abstractmethod
