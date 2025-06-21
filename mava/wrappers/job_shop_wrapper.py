@@ -8,7 +8,6 @@ inherently; thus, their wrappers functions and classes does not work for my JobS
 
 from jumanji.registration import _REGISTRY as REGISTRY
 from jumanji.environments.packing.job_shop import JobShop as _BaseJobShop
-from jumanji.wrappers.time_limit import TimeLimit
 from typing import Optional
 
 def job_shop_factory(
