@@ -23,7 +23,7 @@ def job_shop_factory(
     return env
 
 # **THIS** line actually registers your factory under "job_shop"
-register("job_shop", job_shop_factory)
+register("JobShop-v0", job_shop_factory)
 
 # ————————————————————————————————————————————————————————————————
 
