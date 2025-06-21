@@ -1,6 +1,10 @@
 # a draft by Amin Avan for writting a wrapper for JobShop in jumanji
 # that the source is located in
 # https://github.com/instadeepai/jumanji/tree/main/jumanji/environments/packing/job_shop
+"""
+It seems that the environment which defines in jumanji.py are already implemented multi-agent in jumanji
+inherently; thus, their wrappers functions and classes does not work for my JobShop environment.
+"""
 
 from abc import ABC, abstractmethod
 from functools import cached_property
