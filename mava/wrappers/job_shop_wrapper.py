@@ -32,12 +32,17 @@ def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
 
 
 class JumanjiMarlWrapper(Wrapper, ABC):
-    """copied from mava/wrappers/jumanji.py"""
     def __init__(self, env: Environment, add_global_state: bool):
         self.add_global_state = add_global_state
         super().__init__(env)
-        self.num_agents = self._env.num_agents
-        self.time_limit = self._env.time_limit
+        # either read an existing .num_agents, or assume “one agent per machine” for JobShop: ## added by amin
+        if hasattr(self._env, "num_agents"):    ## added by amin
+            self.num_agents = self._env.num_agents  ## added by amin
+        else:   ## added by amin
+            # JobShop stores its instance generator on `.generator`, which has .num_machines    ## added by amin
+            self.num_agents = self._env.generator.num_machines  ## added by amin
+        # time_limit may not exist on JobShop — default to None ## added by amin
+        self.time_limit = getattr(self._env, "time_limit", None)    ## added by amin
 
     @abstractmethod
     def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
@@ -130,11 +135,31 @@ class JobShopWrapper(JumanjiMarlWrapper):
         self._env: JobShop
 
     def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
-        """copied from 'def modify_timestep(...)' in mava/wrappers/jumanji.py"""
+        # observation = Observation(    ## deleted by amin
+        #     agents_view=timestep.observation.agents_view.astype(float),   ## deleted by amin
+        #     action_mask=timestep.observation.action_mask, ## deleted by amin
+        #     step_count=jnp.repeat(timestep.observation.step_count, self.num_agents),  ## deleted by amin
+        # ) ## deleted by amin
+        # 1) pull out the raw, single-agent fields  # added by amin
+        s = ts.observation  # added by amin
+        # 2) flatten each tensor in the state   # added by amin
+        flat = jnp.concatenate([    # added by amin
+            s.ops_machine_ids.ravel().astype(float),    # added by amin
+            s.ops_durations.ravel().astype(float),  # added by amin
+            s.ops_mask.astype(float).ravel(),   # added by amin
+            s.machines_job_ids.ravel().astype(float),   # added by amin
+            s.machines_remaining_times.ravel().astype(float),   # added by amin
+            s.scheduled_times.ravel().astype(float),    # added by amin
+        ], axis=0)  # added by amin
+        # 3) tile it so each “agent” (machine) sees the full state  # added by amin
+        agents_view = jnp.tile(flat[None, :], (self.num_agents, 1)) # added by amin
+        # 4) action_mask already comes out as shape (num_machines, num_jobs1)   # added by amin
+        action_mask = ts.observation.action_mask    # added by amin
+        step_count = jnp.repeat(ts.observation.step_count, self.num_agents) # added by amin
         observation = Observation(
-            agents_view=timestep.observation.agents_view.astype(float),
-            action_mask=timestep.observation.action_mask,
-            step_count=jnp.repeat(timestep.observation.step_count, self.num_agents),
+            agents_view=agents_view,
+            action_mask=action_mask,
+            step_count=step_count,
         )
         reward = jnp.repeat(timestep.reward, self.num_agents)
         discount = jnp.repeat(timestep.discount, self.num_agents)
@@ -147,11 +172,60 @@ class JobShopWrapper(JumanjiMarlWrapper):
     def observation_spec(
             self,
     ) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
-        """copied from 'def observation_spec(...)' in mava/wrappers/jumanji.py"""
-        # need to cast the agents view and global state to floats as we do in modify timestep
-        inner_spec = super().observation_spec
-        spec = inner_spec.replace(agents_view=inner_spec.agents_view.replace(dtype=float))
+        # ## need to cast the agents view and global state to floats as we do in modify timestep
+        # inner_spec = super().observation_spec
+        # spec = inner_spec.replace(agents_view=inner_spec.agents_view.replace(dtype=float))
+        # if self.add_global_state:
+        #     spec = spec.replace(global_state=inner_spec.global_state.replace(dtype=float))
+        #
+        # return spec
+        # Pull the original Jumanji spec so we can read shapes
+        env_spec = self._env.observation_spec
+        # compute feature dim: sum of all flattened state fields
+        num_jobs, max_ops = env_spec.ops_machine_ids.shape
+        num_machines = self.num_agents
+        feature_dim = (
+                num_jobs * max_ops  # ops_machine_ids
+              + num_jobs * max_ops  # ops_durations
+              + num_jobs * max_ops  # ops_mask
+              + num_machines  # machines_job_ids
+              + num_machines  # machines_remaining_times
+              + num_jobs * max_ops  # scheduled_times
+        )
+        # define new specs
+        agents_view_spec = specs.Array(
+            (num_machines, feature_dim),
+            float,
+            "agents_view",
+        )
+        action_mask_spec = specs.BoundedArray(
+            (num_machines, env_spec.action_mask.shape[-1]),
+            bool,
+            False,
+            True,
+            "action_mask",
+        )
+        step_count_spec = specs.BoundedArray(
+            (num_machines,),
+            int,
+            jnp.zeros(num_machines, int),
+            jnp.repeat(self.time_limit or -1, num_machines),
+            "step_count",
+        )
+        obs_data = {
+            "agents_view": agents_view_spec,
+            "action_mask": action_mask_spec,
+            "step_count": step_count_spec,
+        }
         if self.add_global_state:
-            spec = spec.replace(global_state=inner_spec.global_state.replace(dtype=float))
+            # fallback to concatenating agents_view across machines
+            global_dim = num_machines * feature_dim
+            global_state_spec = specs.Array(
+                (num_machines, global_dim),
+                float,
+                "global_state",
+            )
+            obs_data["global_state"] = global_state_spec
+            return specs.Spec(ObservationGlobalState, "ObservationSpec", **obs_data)
 
-        return spec
+        return specs.Spec(Observation, "ObservationSpec", **obs_data)
