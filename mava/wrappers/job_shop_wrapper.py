@@ -9,7 +9,6 @@ inherently; thus, their wrappers functions and classes does not work for my JobS
 import jumanji
 from jumanji.registration import register
 from jumanji.environments.packing.job_shop import JobShop as _BaseJobShop
-from jumanji.wrappers.time_limit import TimeLimit
 from typing import Optional
 
 @register("job_shop")
