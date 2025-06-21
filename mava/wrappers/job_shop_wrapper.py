@@ -6,7 +6,7 @@ It seems that the environment which defines in jumanji.py are already implemente
 inherently; thus, their wrappers functions and classes does not work for my JobShop environment.
 """
 
-from jumanji.registration import REGISTRY
+from jumanji.registration import _REGISTRY as REGISTRY
 from jumanji.environments.packing.job_shop import JobShop as _BaseJobShop
 from jumanji.wrappers.time_limit import TimeLimit
 from typing import Optional
