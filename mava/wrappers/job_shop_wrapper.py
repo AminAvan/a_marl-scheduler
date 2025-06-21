@@ -6,10 +6,16 @@ It seems that the environment which defines in jumanji.py are already implemente
 inherently; thus, their wrappers functions and classes does not work for my JobShop environment.
 """
 
-from jumanji.registration import _REGISTRY as REGISTRY
+# 1) Pull in the private registry and the EnvSpec class
+from jumanji.registration import _REGISTRY
+from jumanji.registration import EnvSpec
+
+# 2) Import Jumanji’s original JobShop and the TimeLimit wrapper
 from jumanji.environments.packing.job_shop import JobShop as _BaseJobShop
+from jumanji.wrappers import TimeLimit
 from typing import Optional
 
+# 3) Define your new factory that *does* accept time_limit
 def job_shop_factory(
     *,
     generator,
@@ -21,9 +27,10 @@ def job_shop_factory(
         env = TimeLimit(env, step_limit=time_limit)
     return env
 
-# Directly override the built-in entry
-REGISTRY["JobShop-v0"] = job_shop_factory
-# ————————————————————————————————
+# 4) Mutate the existing EnvSpec in place
+orig_spec: EnvSpec = _REGISTRY["JobShop-v0"]
+orig_spec.entry_point = job_shop_factory
+# (orig_spec.kwargs stays as-is, so Hydra’s passed-in time_limit ends up in the call)
 # ————————————————————————————————————————————————————————————————
 
 from abc import ABC, abstractmethod
