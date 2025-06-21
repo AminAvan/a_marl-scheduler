@@ -6,6 +6,27 @@ It seems that the environment which defines in jumanji.py are already implemente
 inherently; thus, their wrappers functions and classes does not work for my JobShop environment.
 """
 
+import jumanji
+from jumanji.registration import register
+from jumanji.environments.packing.job_shop import JobShop as _BaseJobShop
+from jumanji.wrappers.time_limit import TimeLimit
+from typing import Optional
+
+@register("job_shop")
+def job_shop_factory(
+    *,
+    generator,                   # your JobShop Generator instance
+    time_limit: Optional[int] = None,
+    **kwargs                     # num_jobs, num_machines, etc.
+) -> jumanji.env.Environment:
+    """Override Jumanji’s registration so we accept time_limit here."""
+    env = _BaseJobShop(generator=generator, **kwargs)
+    if time_limit is not None:
+        env = TimeLimit(env, step_limit=time_limit)
+    return env
+
+# ————————————————————————————————————————————————————————————————
+
 from abc import ABC, abstractmethod
 from functools import cached_property
 from typing import Any, Dict, Tuple, Union
