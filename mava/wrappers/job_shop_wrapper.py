@@ -61,7 +61,8 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         """Reset the environment."""
         state, timestep = self._env.reset(key)
         print("=============================")
-        print("State attributes:", dir(state))
+        print("Scheduled times shape:", state.scheduled_times.shape)
+        print("Scheduled times type:", state.scheduled_times.dtype)
         print("=============================")
         timestep = self.modify_timestep(timestep)
         if self.add_global_state:
