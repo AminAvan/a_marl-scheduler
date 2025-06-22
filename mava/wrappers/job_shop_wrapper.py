@@ -135,41 +135,42 @@ class JobShopWrapper(JumanjiMarlWrapper):
         self._env: JobShop
 
     def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
-        # pull out the raw, single-agent observation
-        s = timestep.observation
+        # 1) grab the raw Jumanji state (has all the fields you need)
+        raw = timestep.observation
 
-        # flatten each field of the JobShop state and concatenate
+        # 2) flatten each tensor in the raw state
         flat = jnp.concatenate([
-            s.ops_machine_ids.ravel().astype(float),
-            s.ops_durations.ravel().astype(float),
-            s.ops_mask.astype(float).ravel(),
-            s.machines_job_ids.ravel().astype(float),
-            s.machines_remaining_times.ravel().astype(float),
-            s.scheduled_times.ravel().astype(float),
+            raw.ops_machine_ids.ravel().astype(float),
+            raw.ops_durations.ravel().astype(float),
+            raw.ops_mask.astype(float).ravel(),
+            raw.machines_job_ids.ravel().astype(float),
+            raw.machines_remaining_times.ravel().astype(float),
+            raw.scheduled_times.ravel().astype(float),    # now safe
         ], axis=0)
 
-        # tile so each “agent” (machine) sees the same flattened state
+        # 3) tile so each “agent” sees the same full state
         agents_view = jnp.tile(flat[None, :], (self.num_agents, 1))
 
-        # use the env’s own action_mask and step count
-        action_mask = s.action_mask
-        step_count = jnp.repeat(s.step_count, self.num_agents)
+        # 4) read the raw action mask and step count
+        action_mask = raw.action_mask
+        step_count  = jnp.repeat(raw.step_count, self.num_agents)
 
-        # build the Mava Observation
-        observation = Observation(
+        # 5) build the Mava Observation
+        obs = Observation(
             agents_view=agents_view,
             action_mask=action_mask,
             step_count=step_count,
         )
 
-        # replicate reward and discount across agents
-        reward = jnp.repeat(timestep.reward, self.num_agents)
+        # 6) replicate reward/discount across agents
+        reward   = jnp.repeat(timestep.reward,   self.num_agents)
         discount = jnp.repeat(timestep.discount, self.num_agents)
 
         extras: Dict[str, Any] = {"env_metrics": {}}
 
+        # 7) return a new timestep with your Mava obs + team reward
         return timestep.replace(
-            observation=observation,
+            observation=obs,
             reward=reward,
             discount=discount,
             extras=extras,
