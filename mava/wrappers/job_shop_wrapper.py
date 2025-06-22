@@ -60,10 +60,6 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def reset(self, key: chex.PRNGKey) -> Tuple[State, TimeStep]:
         """Reset the environment."""
         state, timestep = self._env.reset(key)
-        print("=============================")
-        print("Scheduled times shape:", state.scheduled_times.shape)
-        print("Scheduled times type:", state.scheduled_times.dtype)
-        print("=============================")
         timestep = self.modify_timestep(timestep)
         if self.add_global_state:
             global_state = self.get_global_state(timestep.observation)
@@ -141,11 +137,12 @@ class JobShopWrapper(JumanjiMarlWrapper):
     def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
         # 0) If someone upstream already wrapped this timestep into a Mava Observation,
         #    we skip re-wrapping entirely.
-        if isinstance(timestep.observation, Observation):
+        # If this obs is already a Mava Observation (i.e. lacks JobShop fields),
+        # skip our custom flattening entirely.
+        obs = timestep.observation
+        if not hasattr(obs, "ops_machine_ids"):
             return timestep
-
-        # 1) Pull out the raw Jumanji state
-        raw = timestep.observation
+        raw = obs
 
         # 2) Flatten each field of the JobShop state
         flat = jnp.concatenate([
