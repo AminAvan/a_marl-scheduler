@@ -205,13 +205,28 @@ class JobShopWrapper(JumanjiMarlWrapper):
             True,
             "action_mask",
         )
-        step_count_spec = specs.BoundedArray(
-            (num_machines,),
-            int,
-            jnp.zeros(num_machines, int),
-            jnp.repeat(self.time_limit or -1, num_machines),
-            "step_count",
-        )
+        # step_count_spec = specs.BoundedArray(  # commented amin
+        #     (num_machines,),  # commented amin
+        #     int,  # commented amin
+        #     jnp.zeros(num_machines, int), # commented amin
+        #     jnp.repeat(self.time_limit or -1, num_machines),  # commented amin
+        #     "step_count", # commented amin
+        # )
+        if self.time_limit is not None:     # added amin
+            step_count_spec = specs.BoundedArray(   # added amin
+                (num_machines,),    # added amin
+                int,    # added amin
+                jnp.zeros(num_machines, int),   # added amin
+                jnp.repeat(self.time_limit, num_machines),  # added amin
+                "step_count",   # added amin
+            )   # added amin
+        else:   # added amin
+            # no fixed upper bound on episode length in JobShop # added amin
+            step_count_spec = specs.Array(      # added amin
+                (num_machines,),        # added amin
+                int,    # added amin
+                "step_count",   # added amin
+            )   # added amin
         obs_data = {
             "agents_view": agents_view_spec,
             "action_mask": action_mask_spec,
