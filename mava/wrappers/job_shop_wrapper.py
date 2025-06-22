@@ -60,6 +60,9 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def reset(self, key: chex.PRNGKey) -> Tuple[State, TimeStep]:
         """Reset the environment."""
         state, timestep = self._env.reset(key)
+        print("=============================")
+        print("State attributes:", dir(state))
+        print("=============================")
         timestep = self.modify_timestep(timestep)
         if self.add_global_state:
             global_state = self.get_global_state(timestep.observation)
@@ -135,10 +138,6 @@ class JobShopWrapper(JumanjiMarlWrapper):
         self._env: JobShop
 
     def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
-        print("Observation:", timestep.observation)
-        print("===========================================================")
-        print("===========================================================")
-        print("===========================================================")
         # 0) If someone upstream already wrapped this timestep into a Mava Observation,
         #    we skip re-wrapping entirely.
         if isinstance(timestep.observation, Observation):
