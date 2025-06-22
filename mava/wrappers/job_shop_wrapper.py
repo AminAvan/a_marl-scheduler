@@ -135,6 +135,10 @@ class JobShopWrapper(JumanjiMarlWrapper):
         self._env: JobShop
 
     def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
+        print("Observation:", timestep.observation)
+        print("===========================================================")
+        print("===========================================================")
+        print("===========================================================")
         # 0) If someone upstream already wrapped this timestep into a Mava Observation,
         #    we skip re-wrapping entirely.
         if isinstance(timestep.observation, Observation):
