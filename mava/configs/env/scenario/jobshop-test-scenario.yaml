@@ -9,6 +9,6 @@ task_config:
   max_op_duration: 4 # maximum processing time of any given operation.
   # the above values is derived from 'jumanji/environments/packing/job_shop/generator.py'
 # Remove env_kwargs/time_limit from you config file, jobshop doesn't take that argument
-#env_kwargs:
+env_kwargs: {}
 #   time_limit: 80  # time_limit ≥ num_jobs × max_num_ops × max_op_duration
 #                    # time_limit ≥ 5 * 4 * 4
