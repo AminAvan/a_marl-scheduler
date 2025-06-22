@@ -135,37 +135,44 @@ class JobShopWrapper(JumanjiMarlWrapper):
         self._env: JobShop
 
     def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
-        # observation = Observation(    ## deleted by amin
-        #     agents_view=timestep.observation.agents_view.astype(float),   ## deleted by amin
-        #     action_mask=timestep.observation.action_mask, ## deleted by amin
-        #     step_count=jnp.repeat(timestep.observation.step_count, self.num_agents),  ## deleted by amin
-        # ) ## deleted by amin
-        # 1) pull out the raw, single-agent fields  # added by amin
-        s = ts.observation  # added by amin
-        # 2) flatten each tensor in the state   # added by amin
-        flat = jnp.concatenate([    # added by amin
-            s.ops_machine_ids.ravel().astype(float),    # added by amin
-            s.ops_durations.ravel().astype(float),  # added by amin
-            s.ops_mask.astype(float).ravel(),   # added by amin
-            s.machines_job_ids.ravel().astype(float),   # added by amin
-            s.machines_remaining_times.ravel().astype(float),   # added by amin
-            s.scheduled_times.ravel().astype(float),    # added by amin
-        ], axis=0)  # added by amin
-        # 3) tile it so each “agent” (machine) sees the full state  # added by amin
-        agents_view = jnp.tile(flat[None, :], (self.num_agents, 1)) # added by amin
-        # 4) action_mask already comes out as shape (num_machines, num_jobs1)   # added by amin
-        action_mask = ts.observation.action_mask    # added by amin
-        step_count = jnp.repeat(ts.observation.step_count, self.num_agents) # added by amin
+        # pull out the raw, single-agent observation
+        s = timestep.observation
+
+        # flatten each field of the JobShop state and concatenate
+        flat = jnp.concatenate([
+            s.ops_machine_ids.ravel().astype(float),
+            s.ops_durations.ravel().astype(float),
+            s.ops_mask.astype(float).ravel(),
+            s.machines_job_ids.ravel().astype(float),
+            s.machines_remaining_times.ravel().astype(float),
+            s.scheduled_times.ravel().astype(float),
+        ], axis=0)
+
+        # tile so each “agent” (machine) sees the same flattened state
+        agents_view = jnp.tile(flat[None, :], (self.num_agents, 1))
+
+        # use the env’s own action_mask and step count
+        action_mask = s.action_mask
+        step_count = jnp.repeat(s.step_count, self.num_agents)
+
+        # build the Mava Observation
         observation = Observation(
             agents_view=agents_view,
             action_mask=action_mask,
             step_count=step_count,
         )
+
+        # replicate reward and discount across agents
         reward = jnp.repeat(timestep.reward, self.num_agents)
         discount = jnp.repeat(timestep.discount, self.num_agents)
-        metrics: Dict[str, Any] = {"env_metrics": {}}
+
+        extras: Dict[str, Any] = {"env_metrics": {}}
+
         return timestep.replace(
-            observation=observation, reward=reward, discount=discount, extras=metrics
+            observation=observation,
+            reward=reward,
+            discount=discount,
+            extras=extras,
         )
 
     @cached_property
