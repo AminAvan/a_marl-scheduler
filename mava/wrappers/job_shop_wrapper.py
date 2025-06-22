@@ -1,192 +1,258 @@
-# mava/wrappers/job_shop_wrapper.py
+# a draft by Amin Avan for writting a wrapper for JobShop in jumanji
+# that the source is located in
+# https://github.com/instadeepai/jumanji/tree/main/jumanji/environments/packing/job_shop
+"""
+It seems that the environment which defines in jumanji.py are already implemented multi-agent in jumanji
+inherently; thus, their wrappers functions and classes does not work for my JobShop environment.
+"""
 
-# ─── 0) Registry hack ──────────────────────────────────────────────────────────
-from jumanji.registration import _REGISTRY, EnvSpec
+# 1) Pull in the private registry and the EnvSpec class
+from jumanji.registration import _REGISTRY
+from jumanji.registration import EnvSpec
 
-# No direct import of the class here yet
-
-# 0.a) Mutate the existing EnvSpec to point at your subclass by string
-_spec: EnvSpec = _REGISTRY["JobShop-v0"]
-_spec.entry_point = "mava.wrappers.job_shop_wrapper:TimeLimitedJobShop"
-# _spec.kwargs stays as-is, so Hydra’s passed-in time_limit ends up in the constructor
-
-# 0.b) Now import the real base and build your subclass
+# 2) Import Jumanji’s original JobShop and the TimeLimit wrapper
 from jumanji.environments.packing.job_shop import JobShop as _BaseJobShop
-from jumanji.types import StepType, TimeStep
+from jumanji.wrappers import TimeLimit
+from typing import Optional
 
-class TimeLimitedJobShop(_BaseJobShop):
-    def __init__(
-        self,
-        *,
-        generator,
-        num_jobs: int,
-        num_machines: int,
-        max_num_ops: int,
-        max_op_duration: int,
-        time_limit: int | None = None,
-    ):
-        super().__init__(
-            generator=generator,
-            num_jobs=num_jobs,
-            num_machines=num_machines,
-            max_num_ops=max_num_ops,
-            max_op_duration=max_op_duration,
-        )
-        self._time_limit = time_limit
+# 3) Define your new factory that *does* accept time_limit
+def job_shop_factory(
+    *,
+    generator,
+    time_limit: Optional[int] = None,
+    **kwargs
+):
+    env = _BaseJobShop(generator=generator, **kwargs)
+    if time_limit is not None:
+        env = TimeLimit(env, step_limit=time_limit)
+    return env
 
-    def step(self, state, action):
-        next_state, ts = super().step(state, action)
-        if self._time_limit is not None and ts.observation.step_count >= self._time_limit:
-            ts = ts.replace(step_type=StepType.LAST)
-        return next_state, ts
+# 4) Mutate the existing EnvSpec in place
+orig_spec: EnvSpec = _REGISTRY["JobShop-v0"]
+orig_spec.entry_point = job_shop_factory
+# (orig_spec.kwargs stays as-is, so Hydra’s passed-in time_limit ends up in the call)
+# ————————————————————————————————————————————————————————————————
 
-# ─── 1) Usual imports for your MARL wrapper ────────────────────────────────────
-from abc            import ABC, abstractmethod
-from functools      import cached_property
-from typing         import Any, Dict, Tuple, Union
+from abc import ABC, abstractmethod
+from functools import cached_property
+from typing import Any, Dict, Tuple, Union
 
 import chex
+import jax
 import jax.numpy as jnp
-from jumanji         import specs
-from jumanji.env     import Environment
-from jumanji.types   import TimeStep
+from jumanji import specs
+from jumanji.env import Environment
+
+from jumanji.environments.packing.job_shop import JobShop
+
+from jumanji.types import TimeStep
 from jumanji.wrappers import Wrapper
 
-from mava.types      import Observation, ObservationGlobalState, State
+from mava.types import Observation, ObservationGlobalState, State
 
-# ─── 2) Reward aggregator (unchanged) ─────────────────────────────────────────
+
 def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
+    """Aggregate individual rewards across agents."""
+    """copied from mava/wrappers/jumanji.py"""
     team_reward = jnp.sum(reward)
     return jnp.repeat(team_reward, num_agents)
 
-# ─── 3) Base multi-agent wrapper (with fallback num_agents/time_limit) ────────
+
 class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool):
         self.add_global_state = add_global_state
         super().__init__(env)
-        # fallback to `generator.num_machines` if no .num_agents
-        if hasattr(self._env, "num_agents"):
-            self.num_agents = self._env.num_agents
-        else:
-            self.num_agents = self._env.generator.num_machines
-        self.time_limit = getattr(self._env, "_time_limit", None)
+        # either read an existing .num_agents, or assume “one agent per machine” for JobShop: ## added by amin
+        if hasattr(self._env, "num_agents"):    ## added by amin
+            self.num_agents = self._env.num_agents  ## added by amin
+        else:   ## added by amin
+            # JobShop stores its instance generator on `.generator`, which has .num_machines    ## added by amin
+            self.num_agents = self._env.generator.num_machines  ## added by amin
+        # time_limit may not exist on JobShop — default to None ## added by amin
+        self.time_limit = getattr(self._env, "time_limit", None)    ## added by amin
 
     @abstractmethod
     def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
+        """Modify the timestep for `step` and `reset`."""
         pass
 
     def get_global_state(self, obs: Observation) -> chex.Array:
-        gs = jnp.concatenate(obs.agents_view, axis=0)
-        return jnp.tile(gs, (self.num_agents, 1))
+        """The default way to create a global state for an environment if it has no
+        available global state - concatenate all observations.
+        """
+        global_state = jnp.concatenate(obs.agents_view, axis=0)
+        global_state = jnp.tile(global_state, (self._env.num_agents, 1))
+        return global_state
 
     def reset(self, key: chex.PRNGKey) -> Tuple[State, TimeStep]:
-        state, ts = self._env.reset(key)
-        ts = self.modify_timestep(ts)
+        """Reset the environment."""
+        state, timestep = self._env.reset(key)
+        timestep = self.modify_timestep(timestep)
         if self.add_global_state:
-            global_state = self.get_global_state(ts.observation)
-            obs = ObservationGlobalState(
+            global_state = self.get_global_state(timestep.observation)
+            observation = ObservationGlobalState(
                 global_state=global_state,
-                agents_view=ts.observation.agents_view,
-                action_mask=ts.observation.action_mask,
-                step_count=ts.observation.step_count,
+                agents_view=timestep.observation.agents_view,
+                action_mask=timestep.observation.action_mask,
+                step_count=timestep.observation.step_count,
             )
-            return state, ts.replace(observation=obs)
-        return state, ts
+            return state, timestep.replace(observation=observation)
+
+        return state, timestep
 
     def step(self, state: State, action: chex.Array) -> Tuple[State, TimeStep]:
-        state, ts = self._env.step(state, action)
-        ts = self.modify_timestep(ts)
+        """Step the environment."""
+        state, timestep = self._env.step(state, action)
+        timestep = self.modify_timestep(timestep)
         if self.add_global_state:
-            global_state = self.get_global_state(ts.observation)
-            obs = ObservationGlobalState(
+            global_state = self.get_global_state(timestep.observation)
+            observation = ObservationGlobalState(
                 global_state=global_state,
-                agents_view=ts.observation.agents_view,
-                action_mask=ts.observation.action_mask,
-                step_count=ts.observation.step_count,
+                agents_view=timestep.observation.agents_view,
+                action_mask=timestep.observation.action_mask,
+                step_count=timestep.observation.step_count,
             )
-            return state, ts.replace(observation=obs)
-        return state, ts
+            return state, timestep.replace(observation=observation)
+
+        return state, timestep
 
     @cached_property
     def observation_spec(self) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
-        # build a BoundedArray only if we have a horizon
-        if self.time_limit is not None:
-            step_count_spec = specs.BoundedArray(
-                (self.num_agents,),
-                int,
-                jnp.zeros(self.num_agents, int),
-                jnp.repeat(self.time_limit, self.num_agents),
-                "step_count",
-            )
-        else:
-            step_count_spec = specs.Array(
-                (self.num_agents,),
-                int,
-                "step_count",
-            )
+        """Specification of the observation of the environment."""
+        step_count = specs.BoundedArray(
+            (self.num_agents,),
+            int,
+            jnp.zeros(self.num_agents, dtype=int),
+            jnp.repeat(self.time_limit, self.num_agents),
+            "step_count",
+        )
 
         obs_spec = self._env.observation_spec
-        data = {
+        obs_data = {
             "agents_view": obs_spec.agents_view,
             "action_mask": obs_spec.action_mask,
-            "step_count": step_count_spec,
+            "step_count": step_count,
         }
+
         if self.add_global_state:
-            num_feat = obs_spec.agents_view.shape[-1]
+            num_obs_features = obs_spec.agents_view.shape[-1]
             global_state = specs.Array(
-                (self.num_agents, self.num_agents * num_feat),
+                (self._env.num_agents, self._env.num_agents * num_obs_features),
                 obs_spec.agents_view.dtype,
                 "global_state",
             )
-            data["global_state"] = global_state
-            return specs.Spec(ObservationGlobalState, "ObservationSpec", **data)
-        return specs.Spec(Observation, "ObservationSpec", **data)
+            obs_data["global_state"] = global_state
+            return specs.Spec(ObservationGlobalState, "ObservationSpec", **obs_data)
+
+        return specs.Spec(Observation, "ObservationSpec", **obs_data)
 
     @cached_property
-    def action_dim(self) -> int:
+    def action_dim(self) -> chex.Array:
+        """Get the actions dim for each agent."""
         return int(self._env.action_spec.num_values[0])
 
-# ─── 4) Your JobShop wrapper ───────────────────────────────────────────────────
-class JobShopWrapper(JumanjiMarlWrapper):
-    def __init__(self, env: _BaseJobShop, add_global_state: bool = False):
-        super().__init__(env, add_global_state)
 
-    def modify_timestep(self, ts: TimeStep) -> TimeStep[Observation]:
-        s = ts.observation
-        # flatten and tile for “one agent per machine”
-        flat = jnp.concatenate([
-            s.ops_machine_ids.ravel().astype(float),
-            s.ops_durations.ravel().astype(float),
-            s.ops_mask.astype(float).ravel(),
-            s.machines_job_ids.ravel().astype(float),
-            s.machines_remaining_times.ravel().astype(float),
-            s.scheduled_times.ravel().astype(float),
-        ], axis=0)
-        agents_view = jnp.tile(flat[None, :], (self.num_agents, 1))
-        action_mask = s.action_mask
-        step_count = jnp.repeat(s.step_count, self.num_agents)
-        obs = Observation(
+class JobShopWrapper(JumanjiMarlWrapper):
+    """Multi-agent wrapper for the JobShop environment inspired by
+    'CleanerWrapper(JumanjiMarlWrapper)' in mava/wrappers/jumanji.py ."""
+
+    def __init__(self, env: JobShop, add_global_state: bool = False):
+        """inspired by 'def __init__(self, env: Cleaner,...' in mava/wrappers/jumanji.py"""
+        super().__init__(env, add_global_state)
+        self._env: JobShop
+
+    def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
+        # observation = Observation(    ## deleted by amin
+        #     agents_view=timestep.observation.agents_view.astype(float),   ## deleted by amin
+        #     action_mask=timestep.observation.action_mask, ## deleted by amin
+        #     step_count=jnp.repeat(timestep.observation.step_count, self.num_agents),  ## deleted by amin
+        # ) ## deleted by amin
+        # 1) pull out the raw, single-agent fields  # added by amin
+        s = ts.observation  # added by amin
+        # 2) flatten each tensor in the state   # added by amin
+        flat = jnp.concatenate([    # added by amin
+            s.ops_machine_ids.ravel().astype(float),    # added by amin
+            s.ops_durations.ravel().astype(float),  # added by amin
+            s.ops_mask.astype(float).ravel(),   # added by amin
+            s.machines_job_ids.ravel().astype(float),   # added by amin
+            s.machines_remaining_times.ravel().astype(float),   # added by amin
+            s.scheduled_times.ravel().astype(float),    # added by amin
+        ], axis=0)  # added by amin
+        # 3) tile it so each “agent” (machine) sees the full state  # added by amin
+        agents_view = jnp.tile(flat[None, :], (self.num_agents, 1)) # added by amin
+        # 4) action_mask already comes out as shape (num_machines, num_jobs1)   # added by amin
+        action_mask = ts.observation.action_mask    # added by amin
+        step_count = jnp.repeat(ts.observation.step_count, self.num_agents) # added by amin
+        observation = Observation(
             agents_view=agents_view,
             action_mask=action_mask,
             step_count=step_count,
         )
-        reward   = jnp.repeat(ts.reward,   self.num_agents)
-        discount = jnp.repeat(ts.discount, self.num_agents)
-        extras   = {"env_metrics": {}}
-        return ts.replace(
-            observation=obs,
-            reward=reward,
-            discount=discount,
-            extras=extras,
+        reward = jnp.repeat(timestep.reward, self.num_agents)
+        discount = jnp.repeat(timestep.discount, self.num_agents)
+        metrics: Dict[str, Any] = {"env_metrics": {}}
+        return timestep.replace(
+            observation=observation, reward=reward, discount=discount, extras=metrics
         )
 
     @cached_property
-    def observation_spec(self) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
-        # exactly the same logic you had—building specs from env_spec
+    def observation_spec(
+            self,
+    ) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
+        # ## need to cast the agents view and global state to floats as we do in modify timestep
+        # inner_spec = super().observation_spec
+        # spec = inner_spec.replace(agents_view=inner_spec.agents_view.replace(dtype=float))
+        # if self.add_global_state:
+        #     spec = spec.replace(global_state=inner_spec.global_state.replace(dtype=float))
+        #
+        # return spec
+        # Pull the original Jumanji spec so we can read shapes
         env_spec = self._env.observation_spec
+        # compute feature dim: sum of all flattened state fields
         num_jobs, max_ops = env_spec.ops_machine_ids.shape
-        nm = self.num_agents
-        fd = num_jobs * max_ops * 3 + nm * 2  # as before
-        return super().observation_spec  # or rebuild if you prefer
+        num_machines = self.num_agents
+        feature_dim = (
+                num_jobs * max_ops  # ops_machine_ids
+              + num_jobs * max_ops  # ops_durations
+              + num_jobs * max_ops  # ops_mask
+              + num_machines  # machines_job_ids
+              + num_machines  # machines_remaining_times
+              + num_jobs * max_ops  # scheduled_times
+        )
+        # define new specs
+        agents_view_spec = specs.Array(
+            (num_machines, feature_dim),
+            float,
+            "agents_view",
+        )
+        action_mask_spec = specs.BoundedArray(
+            (num_machines, env_spec.action_mask.shape[-1]),
+            bool,
+            False,
+            True,
+            "action_mask",
+        )
+        step_count_spec = specs.BoundedArray(
+            (num_machines,),
+            int,
+            jnp.zeros(num_machines, int),
+            jnp.repeat(self.time_limit or -1, num_machines),
+            "step_count",
+        )
+        obs_data = {
+            "agents_view": agents_view_spec,
+            "action_mask": action_mask_spec,
+            "step_count": step_count_spec,
+        }
+        if self.add_global_state:
+            # fallback to concatenating agents_view across machines
+            global_dim = num_machines * feature_dim
+            global_state_spec = specs.Array(
+                (num_machines, global_dim),
+                float,
+                "global_state",
+            )
+            obs_data["global_state"] = global_state_spec
+            return specs.Spec(ObservationGlobalState, "ObservationSpec", **obs_data)
 
-# ─── End of file ───────────────────────────────────────────────────────────────
+        return specs.Spec(Observation, "ObservationSpec", **obs_data)
