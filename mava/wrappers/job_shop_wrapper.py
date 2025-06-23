@@ -116,11 +116,11 @@ class JobShopWrapper(JumanjiMarlWrapper):
         num_ops = jnp.sum(raw.ops_mask)
 
         # Log values for the first environment to avoid tracing and reduce noise
-        # Handle reward shape: (num_envs,) or scalar
-        reward = np.array(timestep.reward[0] if timestep.reward.ndim > 0 else timestep.reward)
-        is_terminal = np.array(timestep.step_type[0] == jnp.array(2))  # First env's terminal state
-        makespan = np.array(makespan[0] if makespan.ndim > 0 else makespan)  # First env's makespan
-        num_ops = np.array(num_ops[0] if num_ops.ndim > 0 else num_ops)  # First env's num_ops
+        # Handle scalar or batched reward and step_type
+        reward = np.array(timestep.reward[0] if hasattr(timestep.reward, 'ndim') and timestep.reward.ndim > 0 else timestep.reward)
+        is_terminal = np.array(timestep.step_type == jnp.array(2) if not hasattr(timestep.step_type, 'ndim') or timestep.step_type.ndim == 0 else timestep.step_type[0] == jnp.array(2))
+        makespan = np.array(makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan)
+        num_ops = np.array(num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops)
         # Log only terminal steps to reduce noise (optional: remove 'if' to log all steps)
         if is_terminal:
             print(f"Step: Reward={reward}, Is terminal={is_terminal}, Makespan={makespan}, Num ops={num_ops}")
