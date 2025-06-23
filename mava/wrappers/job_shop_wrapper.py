@@ -29,13 +29,13 @@ class JumanjiMarlWrapper(Wrapper, ABC):
             self.num_agents = self._env.num_agents
         else:
             self.num_agents = self._env.generator.num_machines
-        self.time_limit = getattr(self.time_limit, "time_limit", None)
+        self.time_limit = getattr(self._env, "time_limit", None)
 
     @abstractmethod
     def modify_timestep(self, timestep: TimeStep, state) -> TimeStep[Observation]:
         pass
 
-    def get_global_state(self, obs: Observation, state) -> chex.Array:
+    def get_global_state(self, obs: Observation) -> chex.Array:
         global_state = jnp.concatenate(obs.agents_view, axis=0)
         global_state = jnp.tile(global_state, (self._env.num_agents, 1))
         return global_state
@@ -44,7 +44,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         state, timestep = self._env.reset(key)
         timestep = self.modify_timestep(timestep, state)
         if self.add_global_state:
-            global_state = self.get_global_state(timestep.observation, state)
+            global_state = self.get_global_state(timestep.observation)
             observation = ObservationGlobalState(
                 global_state=global_state,
                 agents_view=timestep.observation.agents_view,
@@ -58,7 +58,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         state, timestep = self._env.step(state, action)
         timestep = self.modify_timestep(timestep, state)
         if self.add_global_state:
-            global_state = self.get_global_state(timestep.observation, state)
+            global_state = self.get_global_state(timestep.observation)
             observation = ObservationGlobalState(
                 global_state=global_state,
                 agents_view=timestep.observation.agents_view,
@@ -77,7 +77,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
             jnp.repeat(self.time_limit, self.num_agents),
             "step_count",
         )
-        obs_spec = self._env.observation_spec()
+        obs_spec = self._env.observation_spec
         obs_data = {
             "agents_view": obs_spec.agents_view,
             "action_mask": obs_spec.action_mask,
@@ -96,13 +96,12 @@ class JumanjiMarlWrapper(Wrapper, ABC):
 
     @cached_property
     def action_dim(self) -> chex.Array:
-        return int(self._env.action_spec().num_values[0])
+        return int(self._env.action_spec.num_values[0])
 
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: JobShop, add_global_state: bool = False):
         super().__init__(env, add_global_state)
         self._env: JobShop
-        # Set a fallback time_limit if not provided by the environment
         if self.time_limit is None:
             num_jobs = self._env.generator.num_jobs
             max_num_ops = self._env.generator.max_num_ops
@@ -115,17 +114,14 @@ class JobShopWrapper(JumanjiMarlWrapper):
             return timestep
         raw = obs
 
-        # Calculate makespan and number of active operations
         makespan = jnp.max(state.scheduled_times + raw.ops_durations, where=raw.ops_mask, initial=0)
         num_ops = jnp.sum(raw.ops_mask)
 
-        # Prepare values for logging, handling scalar or batched cases
         reward = timestep.reward[0] if hasattr(timestep.reward, 'ndim') and timestep.reward.ndim > 0 else timestep.reward
         is_terminal = (timestep.step_type == jnp.array(2) if not hasattr(timestep.step_type, 'ndim') or timestep.step_type.ndim == 0 else timestep.step_type[0] == jnp.array(2))
         makespan_log = makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan
         num_ops_log = num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops
 
-        # Log only terminal steps using io_callback with conditional
         def log_fn():
             jax.experimental.io_callback(_log_callback, None, reward, is_terminal, makespan_log, num_ops_log)
             return None
@@ -167,7 +163,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
     @cached_property
     def observation_spec(self) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
-        env_spec = self._env.observation_spec()
+        env_spec = self._env.observation_spec
         num_jobs, max_ops = env_spec.ops_machine_ids.shape
         num_machines = self.num_agents
         feature_dim = (
