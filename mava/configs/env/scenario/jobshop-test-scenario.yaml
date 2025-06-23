@@ -1,14 +1,58 @@
-# The config of the jobshop-test-scenario environment
+## The config of the jobshop-test-scenario environment
+#name: JobShop-v0
+#task_name: jobshop-test-scenario
+#
+#task_config:
+#  num_jobs: 5 # number of jobs that need to be scheduled.
+#  num_machines: 4 # number of machines that the jobs can be scheduled on.
+#  max_num_ops: 4 # maximum number of operations for any given job.
+#  max_op_duration: 4 # maximum processing time of any given operation.
+#  # the above values is derived from 'jumanji/environments/packing/job_shop/generator.py'
+## Remove env_kwargs/time_limit from you config file, jobshop doesn't take that argument
+#env_kwargs: {}
+##   time_limit: 80  # time_limit ≥ num_jobs × max_num_ops × max_op_duration
+##                    # time_limit ≥ 5 * 4 * 4
+#######################################################
+########### above code working fine ###################
+#######################################################
+# Configuration for the jobshop-test-scenario environment in Mava
 name: JobShop-v0
 task_name: jobshop-test-scenario
 
 task_config:
-  num_jobs: 5 # number of jobs that need to be scheduled.
-  num_machines: 4 # number of machines that the jobs can be scheduled on.
-  max_num_ops: 4 # maximum number of operations for any given job.
-  max_op_duration: 4 # maximum processing time of any given operation.
-  # the above values is derived from 'jumanji/environments/packing/job_shop/generator.py'
-# Remove env_kwargs/time_limit from you config file, jobshop doesn't take that argument
-env_kwargs: {}
-#   time_limit: 80  # time_limit ≥ num_jobs × max_num_ops × max_op_duration
-#                    # time_limit ≥ 5 * 4 * 4
+  num_jobs: 5 # Number of jobs to schedule
+  num_machines: 4 # Number of machines available
+  max_num_ops: 4 # Maximum operations per job
+  min_num_ops: 1 # Minimum operations per job (aligned with RandomGenerator)
+  max_op_duration: 4 # Maximum operation duration
+  min_op_duration: 1 # Minimum operation duration (aligned with RandomGenerator)
+
+env_kwargs:
+  generator: RandomGenerator # Explicitly use RandomGenerator (if supported by Mava)
+
+network:
+  num_layers_machines: 1 # Layers for machine embeddings
+  num_layers_operations: 1 # Layers for operation embeddings
+  num_layers_joint_machines_jobs: 2 # Layers for joint processing
+  transformer_num_heads: 8 # Transformer heads
+  transformer_key_size: 16 # Transformer key size
+  transformer_mlp_units: [512] # MLP units in transformer
+
+training:
+  num_epochs: 65 # Number of training epochs
+  num_learner_steps_per_epoch: 200 # Learner steps per epoch
+  n_steps: 10 # Steps per rollout
+  total_batch_size: 128 # Batch size for training
+
+evaluation:
+  eval_total_batch_size: 512 # Batch size for evaluation
+  greedy_eval_total_batch_size: 512 # Batch size for greedy evaluation
+
+a2c:
+  normalize_advantage: False # Disable advantage normalization
+  discount_factor: 0.99 # Discount factor
+  bootstrapping_factor: 0.95 # Lambda for GAE
+  l_pg: 1.0 # Policy gradient loss coefficient
+  l_td: 1.0 # Value loss coefficient
+  l_en: 0.1 # Entropy coefficient (increased to prevent no-op policy collapse)
+  learning_rate: 1e-4 # Learning rate
