@@ -13,7 +13,6 @@ from jumanji.wrappers import Wrapper
 from mava.types import Observation, ObservationGlobalState, State
 
 def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
-    """Aggregate individual rewards across agents."""
     team_reward = jnp.sum(reward)
     return jnp.repeat(team_reward, num_agents)
 
@@ -29,7 +28,6 @@ class JumanjiMarlWrapper(Wrapper, ABC):
 
     @abstractmethod
     def modify_timestep(self, timestep: TimeStep, state) -> TimeStep[Observation]:
-        """Modify the timestep for `step` and `reset`."""
         pass
 
     def get_global_state(self, obs: Observation) -> chex.Array:
@@ -117,7 +115,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
         agents_view = jnp.tile(flat[None, :], (self.num_agents, 1))
         action_mask = raw.action_mask
-        step_count = jnp.repeat(raw.step_count, self.num_agents)
+        step_count = jnp.repeat(state.step_count, self.num_agents)  # Use state.step_count
 
         obs = Observation(
             agents_view=agents_view,
