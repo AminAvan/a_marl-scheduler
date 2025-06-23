@@ -5,7 +5,7 @@ from typing import Any, Dict, Tuple, Union
 import chex
 import jax
 import jax.numpy as jnp
-import numpy as np
+import jax.lax
 from jumanji import specs
 from jumanji.env import Environment
 from jumanji.environments.packing.job_shop import JobShop
@@ -29,13 +29,13 @@ class JumanjiMarlWrapper(Wrapper, ABC):
             self.num_agents = self._env.num_agents
         else:
             self.num_agents = self._env.generator.num_machines
-        self.time_limit = getattr(self._env, "time_limit", None)
+        self.time_limit = getattr(self.time_limit, "time_limit", None)
 
     @abstractmethod
     def modify_timestep(self, timestep: TimeStep, state) -> TimeStep[Observation]:
         pass
 
-    def get_global_state(self, obs: Observation) -> chex.Array:
+    def get_global_state(self, obs: Observation, state) -> chex.Array:
         global_state = jnp.concatenate(obs.agents_view, axis=0)
         global_state = jnp.tile(global_state, (self._env.num_agents, 1))
         return global_state
@@ -44,7 +44,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         state, timestep = self._env.reset(key)
         timestep = self.modify_timestep(timestep, state)
         if self.add_global_state:
-            global_state = self.get_global_state(timestep.observation)
+            global_state = self.get_global_state(timestep.observation, state)
             observation = ObservationGlobalState(
                 global_state=global_state,
                 agents_view=timestep.observation.agents_view,
@@ -58,7 +58,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         state, timestep = self._env.step(state, action)
         timestep = self.modify_timestep(timestep, state)
         if self.add_global_state:
-            global_state = self.get_global_state(timestep.observation)
+            global_state = self.get_global_state(timestep.observation, state)
             observation = ObservationGlobalState(
                 global_state=global_state,
                 agents_view=timestep.observation.agents_view,
@@ -77,7 +77,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
             jnp.repeat(self.time_limit, self.num_agents),
             "step_count",
         )
-        obs_spec = self._env.observation_spec
+        obs_spec = self._env.observation_spec()
         obs_data = {
             "agents_view": obs_spec.agents_view,
             "action_mask": obs_spec.action_mask,
@@ -96,7 +96,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
 
     @cached_property
     def action_dim(self) -> chex.Array:
-        return int(self._env.action_spec.num_values[0])
+        return int(self._env.action_spec().num_values[0])
 
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: JobShop, add_global_state: bool = False):
@@ -125,11 +125,15 @@ class JobShopWrapper(JumanjiMarlWrapper):
         makespan_log = makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan
         num_ops_log = num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops
 
-        # Log only terminal steps using io_callback to avoid tracing errors
-        def log_if_terminal(is_term, rew, mksp, n_ops):
-            jax.experimental.io_callback(_log_callback, None, rew, is_term, mksp, n_ops, cond=is_term)
+        # Log only terminal steps using io_callback with conditional
+        def log_fn():
+            jax.experimental.io_callback(_log_callback, None, reward, is_terminal, makespan_log, num_ops_log)
+            return None
 
-        log_if_terminal(is_terminal, reward, makespan_log, num_ops_log)
+        def no_op():
+            return None
+
+        jax.lax.cond(is_terminal, log_fn, no_op)
 
         flat = jnp.concatenate([
             raw.ops_machine_ids.ravel().astype(float),
@@ -163,7 +167,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
     @cached_property
     def observation_spec(self) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
-        env_spec = self._env.observation_spec
+        env_spec = self._env.observation_spec()
         num_jobs, max_ops = env_spec.ops_machine_ids.shape
         num_machines = self.num_agents
         feature_dim = (
