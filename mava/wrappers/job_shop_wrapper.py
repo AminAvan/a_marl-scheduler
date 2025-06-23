@@ -17,6 +17,10 @@ def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
     team_reward = jnp.sum(reward)
     return jnp.repeat(team_reward, num_agents)
 
+def _log_callback(reward, is_terminal, makespan, num_ops):
+    """Callback to print values outside JAX tracing."""
+    print(f"Step: Reward={float(reward):.1f}, Is terminal={bool(is_terminal)}, Makespan={float(makespan):.1f}, Num ops={int(num_ops)}")
+
 class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool):
         self.add_global_state = add_global_state
@@ -115,15 +119,17 @@ class JobShopWrapper(JumanjiMarlWrapper):
         makespan = jnp.max(state.scheduled_times + raw.ops_durations, where=raw.ops_mask, initial=0)
         num_ops = jnp.sum(raw.ops_mask)
 
-        # Log values for the first environment to avoid tracing and reduce noise
-        # Handle scalar or batched reward and step_type
-        reward = np.array(timestep.reward[0] if hasattr(timestep.reward, 'ndim') and timestep.reward.ndim > 0 else timestep.reward)
-        is_terminal = np.array(timestep.step_type == jnp.array(2) if not hasattr(timestep.step_type, 'ndim') or timestep.step_type.ndim == 0 else timestep.step_type[0] == jnp.array(2))
-        makespan = np.array(makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan)
-        num_ops = np.array(num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops)
-        # Log only terminal steps to reduce noise (optional: remove 'if' to log all steps)
-        if is_terminal:
-            print(f"Step: Reward={reward}, Is terminal={is_terminal}, Makespan={makespan}, Num ops={num_ops}")
+        # Prepare values for logging, handling scalar or batched cases
+        reward = timestep.reward[0] if hasattr(timestep.reward, 'ndim') and timestep.reward.ndim > 0 else timestep.reward
+        is_terminal = (timestep.step_type == jnp.array(2) if not hasattr(timestep.step_type, 'ndim') or timestep.step_type.ndim == 0 else timestep.step_type[0] == jnp.array(2))
+        makespan_log = makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan
+        num_ops_log = num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops
+
+        # Log only terminal steps using io_callback to avoid tracing errors
+        def log_if_terminal(is_term, rew, mksp, n_ops):
+            jax.experimental.io_callback(_log_callback, None, rew, is_term, mksp, n_ops, cond=is_term)
+
+        log_if_terminal(is_terminal, reward, makespan_log, num_ops_log)
 
         flat = jnp.concatenate([
             raw.ops_machine_ids.ravel().astype(float),
