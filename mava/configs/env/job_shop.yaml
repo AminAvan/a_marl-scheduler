@@ -20,3 +20,7 @@ kwargs:
   {} #  time_limit: 80 # derived from "num_epochs: 65" at https://github.com/instadeepai/jumanji/blob/main/jumanji/training/configs/env/job_shop.yaml
 
 # In JobShop, the goal is to minimize the makespan (the total time required to schedule all operations across machines).
+## Exp: If num_jobs=5, max_num_ops=4, num_machines=4, max_op_duration=4; then, in a perfectly balanced schedule
+## where all operations evenly distributed across 4 machines with no conflicts, the makespan would be approximately 20
+## time units (20 operations ÷ 4 machines * 4 units/op). However, due to precedence constraints and machine conflicts,
+## the optimal makespan is typically higher, around 25–30 time units for this problem size.
