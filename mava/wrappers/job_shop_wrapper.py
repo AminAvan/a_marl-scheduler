@@ -93,16 +93,69 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def action_dim(self) -> chex.Array:
         return int(self._env.action_spec.num_values[0])
 
-class JobShopWrapper(JumanjiMarlWrapper):
-    def __init__(self, env: JobShop, add_global_state: bool = False):
-        super().__init__(env, add_global_state)
-        self._env: JobShop
-        # Set a fallback time_limit if not provided by the environment
-        if self.time_limit is None:
-            num_jobs = self._env.generator.num_jobs
-            max_num_ops = self._env.generator.max_num_ops
-            max_op_duration = self._env.generator.max_op_duration
-            self.time_limit = num_jobs * max_num_ops * max_op_duration  # e.g., 5 * 4 * 4 = 80
+# class JobShopWrapper(JumanjiMarlWrapper):
+#     def __init__(self, env: JobShop, add_global_state: bool = False):
+#         super().__init__(env, add_global_state)
+#         self._env: JobShop
+#         # Set a fallback time_limit if not provided by the environment
+#         if self.time_limit is None:
+#             num_jobs = self._env.generator.num_jobs
+#             max_num_ops = self._env.generator.max_num_ops
+#             max_op_duration = self._env.generator.max_op_duration
+#             self.time_limit = num_jobs * max_num_ops * max_op_duration  # e.g., 5 * 4 * 4 = 80
+#
+#     def modify_timestep(self, timestep: TimeStep, state) -> TimeStep[Observation]:
+#         obs = timestep.observation
+#         if not hasattr(obs, "ops_machine_ids"):
+#             return timestep
+#         raw = obs
+#
+#         # Calculate and log makespan
+#         makespan = jnp.max(state.scheduled_times + raw.ops_durations, where=raw.ops_mask, initial=0)
+#         print("Step reward:", timestep.reward, "Is terminal:", timestep.step_type == jnp.array(2), "Makespan:",
+#               makespan)
+#
+#         flat = jnp.concatenate([
+#             raw.ops_machine_ids.ravel().astype(float),
+#             raw.ops_durations.ravel().astype(float),
+#             raw.ops_mask.astype(float).ravel(),
+#             raw.machines_job_ids.ravel().astype(float),
+#             raw.machines_remaining_times.ravel().astype(float),
+#             state.scheduled_times.ravel().astype(float),
+#         ], axis=0)
+#
+#         agents_view = jnp.tile(flat[None, :], (self.num_agents, 1))
+#         action_mask = raw.action_mask
+#         step_count = jnp.repeat(state.step_count, self.num_agents)  # Use state.step_count
+#
+#         obs = Observation(
+#             agents_view=agents_view,
+#             action_mask=action_mask,
+#             step_count=step_count,
+#         )
+#
+#         reward = jnp.repeat(timestep.reward, self.num_agents)
+#         discount = jnp.repeat(timestep.discount, self.num_agents)
+#         extras: Dict[str, Any] = {"env_metrics": {}}
+#
+#         return timestep.replace(
+#             observation=obs,
+#             reward=reward,
+#             discount=discount,
+#             extras=extras,
+#         )
+class JobShopWrapper(Wrapper):
+    def __init__(self, env, num_agents: int = 4):
+        super().__init__(env)
+        self.num_agents = num_agents
+
+    def reset(self, key):
+        state, timestep = super().reset(key)
+        return state, self.modify_timestep(timestep, state)
+
+    def step(self, state, action):
+        state, timestep = super().step(state, action)
+        return state, self.modify_timestep(timestep, state)
 
     def modify_timestep(self, timestep: TimeStep, state) -> TimeStep[Observation]:
         obs = timestep.observation
@@ -110,10 +163,16 @@ class JobShopWrapper(JumanjiMarlWrapper):
             return timestep
         raw = obs
 
-        # Calculate and log makespan
+        # Calculate makespan and number of active operations
         makespan = jnp.max(state.scheduled_times + raw.ops_durations, where=raw.ops_mask, initial=0)
-        print("Step reward:", timestep.reward, "Is terminal:", timestep.step_type == jnp.array(2), "Makespan:",
-              makespan)
+        num_ops = jnp.sum(raw.ops_mask)
+
+        # Convert to numpy for concrete logging to avoid tracing
+        reward = np.array(timestep.reward[0])  # First agent's reward
+        is_terminal = np.array(timestep.step_type == jnp.array(2))
+        makespan = np.array(makespan)
+        num_ops = np.array(num_ops)
+        print(f"Step: Reward={reward}, Is terminal={is_terminal}, Makespan={makespan}, Num ops={num_ops}")
 
         flat = jnp.concatenate([
             raw.ops_machine_ids.ravel().astype(float),
@@ -126,7 +185,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
         agents_view = jnp.tile(flat[None, :], (self.num_agents, 1))
         action_mask = raw.action_mask
-        step_count = jnp.repeat(state.step_count, self.num_agents)  # Use state.step_count
+        step_count = jnp.repeat(state.step_count, self.num_agents)
 
         obs = Observation(
             agents_view=agents_view,
@@ -136,7 +195,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
         reward = jnp.repeat(timestep.reward, self.num_agents)
         discount = jnp.repeat(timestep.discount, self.num_agents)
-        extras: Dict[str, Any] = {"env_metrics": {}}
+        extras = {"env_metrics": {"makespan": makespan}}
 
         return timestep.replace(
             observation=obs,
