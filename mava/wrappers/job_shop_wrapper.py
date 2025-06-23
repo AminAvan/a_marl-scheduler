@@ -97,6 +97,12 @@ class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: JobShop, add_global_state: bool = False):
         super().__init__(env, add_global_state)
         self._env: JobShop
+        # Set a fallback time_limit if not provided by the environment
+        if self.time_limit is None:
+            num_jobs = self._env.generator.num_jobs
+            max_num_ops = self._env.generator.max_num_ops
+            max_op_duration = self._env.generator.max_op_duration
+            self.time_limit = num_jobs * max_num_ops * max_op_duration  # e.g., 5 * 4 * 4 = 80
 
     def modify_timestep(self, timestep: TimeStep, state) -> TimeStep[Observation]:
         obs = timestep.observation
