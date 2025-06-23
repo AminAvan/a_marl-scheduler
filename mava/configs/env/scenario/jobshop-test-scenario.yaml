@@ -16,40 +16,41 @@
 ########### above code working fine ###################
 #######################################################
 # Configuration for the jobshop-test-scenario environment in Mava
+# Configuration for the jobshop-test-scenario environment in Mava
 name: JobShop-v0
 task_name: jobshop-test-scenario
 
 task_config:
-  num_jobs: 5 # Number of jobs to schedule
-  num_machines: 4 # Number of machines available
-  max_num_ops: 4 # Maximum operations per job
-  max_op_duration: 4 # Maximum operation duration
+  num_jobs: 5
+  num_machines: 4
+  max_num_ops: 4
+  max_op_duration: 4
 
 env_kwargs: {}
 
 network:
-  num_layers_machines: 1 # Layers for machine embeddings
-  num_layers_operations: 1 # Layers for operation embeddings
-  num_layers_joint_machines_jobs: 2 # Layers for joint processing
-  transformer_num_heads: 8 # Transformer heads
-  transformer_key_size: 16 # Transformer key size
-  transformer_mlp_units: [512] # MLP units in transformer
+  num_layers_machines: 1
+  num_layers_operations: 1
+  num_layers_joint_machines_jobs: 2
+  transformer_num_heads: 8
+  transformer_key_size: 16
+  transformer_mlp_units: [512]
 
 training:
-  num_epochs: 65 # Number of training epochs
-  num_learner_steps_per_epoch: 200 # Learner steps per epoch
-  n_steps: 10 # Steps per rollout
-  total_batch_size: 128 # Batch size for training
+  num_epochs: 65
+  num_learner_steps_per_epoch: 200
+  n_steps: 10
+  total_batch_size: 128
 
 evaluation:
-  eval_total_batch_size: 512 # Batch size for evaluation
-  greedy_eval_total_batch_size: 512 # Batch size for greedy evaluation
+  eval_total_batch_size: 512
+  greedy_eval_total_batch_size: 512
 
 a2c:
-  normalize_advantage: False # Disable advantage normalization
-  discount_factor: 0.99 # Discount factor
-  bootstrapping_factor: 0.95 # Lambda for GAE
-  l_pg: 1.0 # Policy gradient loss coefficient
-  l_td: 1.0 # Value loss coefficient
-  l_en: 0.1 # Entropy coefficient (increased to prevent no-op policy collapse)
-  learning_rate: 1e-4 # Learning rate
+  normalize_advantage: False
+  discount_factor: 0.99
+  bootstrapping_factor: 0.95
+  l_pg: 1.0
+  l_td: 1.0
+  l_en: 0.5
+  learning_rate: 1e-4
