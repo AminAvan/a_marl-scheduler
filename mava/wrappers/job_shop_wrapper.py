@@ -116,7 +116,8 @@ class JobShopWrapper(JumanjiMarlWrapper):
         num_ops = jnp.sum(raw.ops_mask)
 
         # Log values for the first environment to avoid tracing and reduce noise
-        reward = np.array(timestep.reward[0, 0] if timestep.reward.ndim > 1 else timestep.reward[0])  # First agent's reward
+        # Handle reward shape: (num_envs,) or scalar
+        reward = np.array(timestep.reward[0] if timestep.reward.ndim > 0 else timestep.reward)
         is_terminal = np.array(timestep.step_type[0] == jnp.array(2))  # First env's terminal state
         makespan = np.array(makespan[0] if makespan.ndim > 0 else makespan)  # First env's makespan
         num_ops = np.array(num_ops[0] if num_ops.ndim > 0 else num_ops)  # First env's num_ops
