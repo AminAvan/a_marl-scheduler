@@ -110,6 +110,11 @@ class JobShopWrapper(JumanjiMarlWrapper):
             return timestep
         raw = obs
 
+        # Calculate and log makespan
+        makespan = jnp.max(state.scheduled_times + raw.ops_durations, where=raw.ops_mask, initial=0)
+        print("Step reward:", timestep.reward, "Is terminal:", timestep.step_type == jnp.array(2), "Makespan:",
+              makespan)
+
         flat = jnp.concatenate([
             raw.ops_machine_ids.ravel().astype(float),
             raw.ops_durations.ravel().astype(float),
