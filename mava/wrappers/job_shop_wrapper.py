@@ -16,11 +16,6 @@ def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
     team_reward = jnp.sum(reward)
     return jnp.repeat(team_reward, num_agents)
 
-def _log_callback(reward, is_terminal, makespan, num_ops):
-    """Callback to print values outside JAX tracing for terminal steps."""
-    if is_terminal:
-        print(f"Step: Reward={float(reward):.1f}, Is terminal={bool(is_terminal)}, Makespan={float(makespan):.1f}, Num ops={int(num_ops)}")
-
 class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool):
         self.add_global_state = add_global_state
@@ -122,7 +117,14 @@ class JobShopWrapper(JumanjiMarlWrapper):
         makespan_log = makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan
         num_ops_log = num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops
 
-        jax.experimental.io_callback(_log_callback, None, reward, is_terminal, makespan_log, num_ops_log)
+        extras = {
+            "env_metrics": {
+                "makespan": makespan,
+                "reward": reward,
+                "is_terminal": is_terminal,
+                "num_ops": num_ops_log
+            }
+        }
 
         flat = jnp.concatenate([
             raw.ops_machine_ids.ravel().astype(float),
@@ -145,7 +147,6 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
         reward = jnp.repeat(timestep.reward, self.num_agents)
         discount = jnp.repeat(timestep.discount, self.num_agents)
-        extras = {"env_metrics": {"makespan": makespan}}
 
         return timestep.replace(
             observation=obs,
