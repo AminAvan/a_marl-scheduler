@@ -23,12 +23,9 @@ task_config:
   num_jobs: 5 # Number of jobs to schedule
   num_machines: 4 # Number of machines available
   max_num_ops: 4 # Maximum operations per job
-  min_num_ops: 1 # Minimum operations per job (aligned with RandomGenerator)
   max_op_duration: 4 # Maximum operation duration
-  min_op_duration: 1 # Minimum operation duration (aligned with RandomGenerator)
 
-env_kwargs:
-  generator: RandomGenerator # Explicitly use RandomGenerator (if supported by Mava)
+env_kwargs: {}
 
 network:
   num_layers_machines: 1 # Layers for machine embeddings
