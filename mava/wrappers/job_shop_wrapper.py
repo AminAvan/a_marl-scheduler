@@ -5,6 +5,7 @@ from typing import Any, Dict, Tuple, Union
 import chex
 import jax
 import jax.numpy as jnp
+import numpy as np
 from jumanji import specs
 from jumanji.env import Environment
 from jumanji.environments.packing.job_shop import JobShop
@@ -110,10 +111,18 @@ class JobShopWrapper(JumanjiMarlWrapper):
             return timestep
         raw = obs
 
-        # Calculate and log makespan
+        # Calculate makespan and number of active operations
         makespan = jnp.max(state.scheduled_times + raw.ops_durations, where=raw.ops_mask, initial=0)
-        print("Step reward:", timestep.reward, "Is terminal:", timestep.step_type == jnp.array(2), "Makespan:",
-              makespan)
+        num_ops = jnp.sum(raw.ops_mask)
+
+        # Log values for the first environment to avoid tracing and reduce noise
+        reward = np.array(timestep.reward[0, 0] if timestep.reward.ndim > 1 else timestep.reward[0])  # First agent's reward
+        is_terminal = np.array(timestep.step_type[0] == jnp.array(2))  # First env's terminal state
+        makespan = np.array(makespan[0] if makespan.ndim > 0 else makespan)  # First env's makespan
+        num_ops = np.array(num_ops[0] if num_ops.ndim > 0 else num_ops)  # First env's num_ops
+        # Log only terminal steps to reduce noise (optional: remove 'if' to log all steps)
+        if is_terminal:
+            print(f"Step: Reward={reward}, Is terminal={is_terminal}, Makespan={makespan}, Num ops={num_ops}")
 
         flat = jnp.concatenate([
             raw.ops_machine_ids.ravel().astype(float),
@@ -126,7 +135,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
         agents_view = jnp.tile(flat[None, :], (self.num_agents, 1))
         action_mask = raw.action_mask
-        step_count = jnp.repeat(state.step_count, self.num_agents)  # Use state.step_count
+        step_count = jnp.repeat(state.step_count, self.num_agents)
 
         obs = Observation(
             agents_view=agents_view,
@@ -136,7 +145,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
         reward = jnp.repeat(timestep.reward, self.num_agents)
         discount = jnp.repeat(timestep.discount, self.num_agents)
-        extras: Dict[str, Any] = {"env_metrics": {}}
+        extras = {"env_metrics": {"makespan": makespan}}
 
         return timestep.replace(
             observation=obs,
