@@ -5,7 +5,6 @@ from typing import Any, Dict, Tuple, Union
 import chex
 import jax
 import jax.numpy as jnp
-import jax.lax
 from jumanji import specs
 from jumanji.env import Environment
 from jumanji.environments.packing.job_shop import JobShop
@@ -18,8 +17,9 @@ def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
     return jnp.repeat(team_reward, num_agents)
 
 def _log_callback(reward, is_terminal, makespan, num_ops):
-    """Callback to print values outside JAX tracing."""
-    print(f"Step: Reward={float(reward):.1f}, Is terminal={bool(is_terminal)}, Makespan={float(makespan):.1f}, Num ops={int(num_ops)}")
+    """Callback to print values outside JAX tracing for terminal steps."""
+    if is_terminal:
+        print(f"Step: Reward={float(reward):.1f}, Is terminal={bool(is_terminal)}, Makespan={float(makespan):.1f}, Num ops={int(num_ops)}")
 
 class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool):
@@ -122,14 +122,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
         makespan_log = makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan
         num_ops_log = num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops
 
-        def log_fn():
-            jax.experimental.io_callback(_log_callback, None, reward, is_terminal, makespan_log, num_ops_log)
-            return None
-
-        def no_op():
-            return None
-
-        jax.lax.cond(is_terminal, log_fn, no_op)
+        jax.experimental.io_callback(_log_callback, None, reward, is_terminal, makespan_log, num_ops_log)
 
         flat = jnp.concatenate([
             raw.ops_machine_ids.ravel().astype(float),
