@@ -93,6 +93,40 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def action_dim(self) -> chex.Array:
         return int(self._env.action_spec.num_values[0])
 
+class RewardWrapper(JobShop):
+    def step(self, state, action):
+        next_state, timestep = super().step(state, action)
+        reward = timestep.reward
+        if action != self.num_jobs * self.max_num_ops and jnp.any(state.ops_mask):
+            reward += 2.0  # Reward for scheduling
+        return next_state, timestep._replace(reward=reward)
+
+class NoOpPenaltyWrapper(JobShop):
+    def step(self, state, action):
+        if action == self.num_jobs * self.max_num_ops and jnp.any(state.ops_mask):
+            return state, -10.0, False, {}  # Penalize no-op
+        return super().step(state, action)
+
+class ExtendedEpisodeWrapper(JobShop):
+    def step(self, state, action):
+        next_state, timestep = super().step(state, action)
+        if jnp.any(state.ops_mask):
+            timestep = timestep._replace(done=False)  # Prevent early termination
+        return next_state, timestep
+
+class ActionAggregationWrapper(JobShop):
+    def __init__(self, env: JobShop):
+        super().__init__(env)
+        self._env: JobShop
+        self.num_agents = self._env.generator.num_machines
+
+    def step(self, state, actions: chex.Array) -> Tuple[State, TimeStep]:
+        # Select first non-no-op action
+        no_op = self._env.num_jobs * self._env.max_num_ops
+        valid_actions = jnp.where(actions != no_op)[0]
+        selected_action = actions[valid_actions[0]] if valid_actions.size > 0 else no_op
+        return self._env.step(state, selected_action)
+
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: JobShop, add_global_state: bool = False):
         super().__init__(env, add_global_state)
@@ -126,17 +160,44 @@ class JobShopWrapper(JumanjiMarlWrapper):
             }
         }
 
-        flat = jnp.concatenate([
-            raw.ops_machine_ids.ravel().astype(float),
-            raw.ops_durations.ravel().astype(float),
-            raw.ops_mask.astype(float).ravel(),
-            raw.machines_job_ids.ravel().astype(float),
-            raw.machines_remaining_times.ravel().astype(float),
-            state.scheduled_times.ravel().astype(float),
-        ], axis=0)
+        # Fixed: Machine-specific observations
+        agents_view = []
+        for machine_id in range(self.num_agents):
+            # Filter ops for this machine
+            machine_ops_mask = (raw.ops_machine_ids == machine_id) & raw.ops_mask
+            machine_ops_features = jnp.concatenate([
+                raw.ops_machine_ids[machine_ops_mask].ravel().astype(float),
+                raw.ops_durations[machine_ops_mask].ravel().astype(float),
+                raw.ops_mask[machine_ops_mask].ravel().astype(float),
+            ])
+            # Machine-specific state
+            machine_state = jnp.array([
+                raw.machines_job_ids[machine_id].astype(float),
+                raw.machines_remaining_times[machine_id].astype(float),
+            ])
+            # Global context
+            global_features = jnp.concatenate([
+                raw.ops_machine_ids.ravel().astype(float),
+                raw.ops_durations.ravel().astype(float),
+                raw.ops_mask.ravel().astype(float),
+                state.scheduled_times.ravel().astype(float),
+            ])
+            # Combine
+            agent_view = jnp.concatenate([machine_ops_features, machine_state, global_features])
+            agents_view.append(agent_view)
+        agents_view = jnp.stack(agents_view)
 
-        agents_view = jnp.tile(flat[None, :], (self.num_agents, 1))
-        action_mask = raw.action_mask
+        # Fixed: Machine-specific action mask
+        action_mask = jnp.zeros((self.num_agents, raw.action_mask.shape[-1]), dtype=bool)
+        for machine_id in range(self.num_agents):
+            # Allow no-op and ops for this machine
+            machine_ops = (raw.ops_machine_ids == machine_id) & raw.ops_mask
+            op_indices = jnp.where(machine_ops.ravel())[0]  # Extract indices from tuple
+            action_mask = action_mask.at[machine_id, op_indices].set(True)
+            # Allow no-op only if no ops available
+            if not jnp.any(machine_ops):
+                action_mask = action_mask.at[machine_id, self._env.num_jobs * self._env.max_num_ops].set(True)
+
         step_count = jnp.repeat(state.step_count, self.num_agents)
 
         obs = Observation(
@@ -145,6 +206,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
             step_count=step_count,
         )
 
+        # Use reward from wrappers
         reward = jnp.repeat(timestep.reward, self.num_agents)
         discount = jnp.repeat(timestep.discount, self.num_agents)
 
@@ -160,13 +222,18 @@ class JobShopWrapper(JumanjiMarlWrapper):
         env_spec = self._env.observation_spec
         num_jobs, max_ops = env_spec.ops_machine_ids.shape
         num_machines = self.num_agents
+        # Fixed: Adjust feature_dim for machine-specific observations
+        max_machine_ops = num_jobs * max_ops  # Max possible ops per machine
         feature_dim = (
-            num_jobs * max_ops
-            + num_jobs * max_ops
-            + num_jobs * max_ops
-            + num_machines
-            + num_machines
-            + num_jobs * max_ops
+            max_machine_ops  # ops_machine_ids
+            + max_machine_ops  # ops_durations
+            + max_machine_ops  # ops_mask
+            + 1  # machines_job_ids
+            + 1  # machines_remaining_times
+            + num_jobs * max_ops  # global ops_machine_ids
+            + num_jobs * max_ops  # global ops_durations
+            + num_jobs * max_ops  # global ops_mask
+            + num_jobs * max_ops  # global scheduled_times
         )
         agents_view_spec = specs.Array(
             (num_machines, feature_dim),
