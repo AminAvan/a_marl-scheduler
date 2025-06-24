@@ -145,11 +145,8 @@ class JobShopWrapper(JumanjiMarlWrapper):
         makespan = jnp.max(state.scheduled_times + raw.ops_durations, where=raw.ops_mask, initial=0)
         num_ops = jnp.sum(raw.ops_mask)
 
-        reward = timestep.reward[0] if hasattr(timestep.reward,
-                                               'ndim') and timestep.reward.ndim > 0 else timestep.reward
-        is_terminal = (timestep.step_type == jnp.array(2) if not hasattr(timestep.step_type,
-                                                                         'ndim') or timestep.step_type.ndim == 0 else
-                       timestep.step_type[0] == jnp.array(2))
+        reward = timestep.reward[0] if hasattr(timestep.reward, 'ndim') and timestep.reward.ndim > 0 else timestep.reward
+        is_terminal = (timestep.step_type == jnp.array(2) if not hasattr(timestep.step_type, 'ndim') or timestep.step_type.ndim == 0 else timestep.step_type[0] == jnp.array(2))
         makespan_log = makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan
         num_ops_log = num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops
 
@@ -169,23 +166,22 @@ class JobShopWrapper(JumanjiMarlWrapper):
         for machine_id in range(self.num_agents):
             machine_ops_mask = (raw.ops_machine_ids == machine_id) & raw.ops_mask
             op_indices = jnp.where(machine_ops_mask.ravel(), size=max_ops_size, fill_value=-1)[0]
-            # Get indices where op_indices >= 0
-            valid_mask = op_indices >= 0
-            valid_op_indices = jnp.where(valid_mask, op_indices, -1)[:jnp.sum(valid_mask)]
+            # Keep all indices, valid ones are >= 0, invalid are -1
             machine_ops_ids = jnp.zeros(max_ops_size, dtype=float)
             machine_ops_durations = jnp.zeros(max_ops_size, dtype=float)
             machine_ops_mask_array = jnp.zeros(max_ops_size, dtype=float)
-
-            def update_arrays(idx, arrays):
+            def update_arrays(i, arrays):
                 ids, durations, mask = arrays
-                ids = ids.at[idx].set(raw.ops_machine_ids.ravel()[idx])
-                durations = durations.at[idx].set(raw.ops_durations.ravel()[idx])
-                mask = mask.at[idx].set(raw.ops_mask.ravel()[idx])
+                # Only update if index is valid (>= 0)
+                valid = op_indices[i] >= 0
+                idx = jnp.where(valid, op_indices[i], 0)  # Use 0 as dummy index if invalid
+                ids = jnp.where(valid, ids.at[i].set(raw.ops_machine_ids.ravel()[idx]), ids)
+                durations = jnp.where(valid, durations.at[i].set(raw.ops_durations.ravel()[idx]), durations)
+                mask = jnp.where(valid, mask.at[i].set(raw.ops_mask.ravel()[idx]), mask)
                 return ids, durations, mask
-
             machine_ops_ids, machine_ops_durations, machine_ops_mask_array = jax.lax.fori_loop(
-                0, jnp.minimum(valid_op_indices.size, max_ops_size),
-                lambda i, arrays: update_arrays(valid_op_indices[i], arrays),
+                0, max_ops_size,  # Use full size to ensure static shape
+                update_arrays,
                 (machine_ops_ids, machine_ops_durations, machine_ops_mask_array)
             )
             machine_ops_features = jnp.concatenate([
@@ -211,10 +207,15 @@ class JobShopWrapper(JumanjiMarlWrapper):
         for machine_id in range(self.num_agents):
             machine_ops = (raw.ops_machine_ids == machine_id) & raw.ops_mask
             op_indices = jnp.where(machine_ops.ravel(), size=max_ops_size, fill_value=-1)[0]
-            # Get indices where op_indices >= 0
-            valid_mask = op_indices >= 0
-            valid_op_indices = jnp.where(valid_mask, op_indices, -1)[:jnp.sum(valid_mask)]
-            action_mask = action_mask.at[machine_id, valid_op_indices].set(True)
+            # Set action mask for valid indices only
+            def set_action_mask(i, mask):
+                valid = op_indices[i] >= 0
+                return jnp.where(valid, mask.at[machine_id, op_indices[i]].set(True), mask)
+            action_mask = jax.lax.fori_loop(
+                0, max_ops_size,
+                set_action_mask,
+                action_mask
+            )
             if not jnp.any(machine_ops):
                 action_mask = action_mask.at[machine_id, self._env.num_jobs * self._env.max_num_ops].set(True)
 
