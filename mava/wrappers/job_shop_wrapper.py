@@ -11,10 +11,17 @@ from jumanji.environments.packing.job_shop import JobShop
 from jumanji.types import TimeStep
 from jumanji.wrappers import Wrapper
 from mava.types import Observation, ObservationGlobalState, State
+import logging
+
+# Configure logging for debugging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
     team_reward = jnp.sum(reward)
     return jnp.repeat(team_reward, num_agents)
+
 
 class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool):
@@ -37,6 +44,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
 
     def reset(self, key: chex.PRNGKey) -> Tuple[State, TimeStep]:
         state, timestep = self._env.reset(key)
+        logger.info(f"Reset: Ops_mask={state.ops_mask}")
         timestep = self.modify_timestep(timestep, state)
         if self.add_global_state:
             global_state = self.get_global_state(timestep.observation)
@@ -93,6 +101,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def action_dim(self) -> chex.Array:
         return int(self._env.action_spec.num_values[0])
 
+
 class RewardWrapper(JobShop):
     def step(self, state, action):
         next_state, timestep = super().step(state, action)
@@ -101,11 +110,13 @@ class RewardWrapper(JobShop):
             reward += 2.0
         return next_state, timestep._replace(reward=reward)
 
+
 class NoOpPenaltyWrapper(JobShop):
     def step(self, state, action):
         if action == self.num_jobs * self.max_num_ops and jnp.any(state.ops_mask):
             return state, -10.0, False, {}
         return super().step(state, action)
+
 
 class ExtendedEpisodeWrapper(JobShop):
     def step(self, state, action):
@@ -114,20 +125,143 @@ class ExtendedEpisodeWrapper(JobShop):
             timestep = timestep._replace(done=False)
         return next_state, timestep
 
-class ActionAggregationWrapper(JobShop):
+
+class MultiAgentActionWrapper(JobShop):
     def __init__(self, env: JobShop):
         super().__init__(env)
         self._env: JobShop
         self.num_agents = self._env.generator.num_machines
+        self.num_jobs = self._env.generator.num_jobs
+        self.max_num_ops = self._env.generator.max_num_ops
+        self.no_op = self.num_jobs * self.max_num_ops
 
     def step(self, state, actions: chex.Array) -> Tuple[State, TimeStep]:
-        no_op = self._env.num_jobs * self._env.max_num_ops
-        valid_actions = jnp.where(actions != no_op)[0]
-        selected_action = actions[valid_actions[0]] if valid_actions.size > 0 else no_op
-        return self._env.step(state, selected_action)
+        """
+        Process simultaneous actions from all machine-agents.
+        Args:
+            state: Current environment state.
+            actions: Array of actions, one per machine (shape: [num_machines]).
+        Returns:
+            next_state: Updated state after processing all valid actions.
+            timestep: Updated timestep with observations, rewards, and termination.
+        """
+        # Log actions for debugging
+        logger.info(f"Step: Actions={actions}, Ops_mask before={state.ops_mask}")
+
+        # Validate actions and get per-agent rewards
+        valid_actions_mask, per_agent_rewards = self._validate_and_reward_actions(state, actions)
+
+        # Schedule valid operations
+        new_state = state
+        for machine_id, action in enumerate(actions):
+            if valid_actions_mask[machine_id]:
+                new_state, _ = self._env.step(new_state, action)
+
+        # Advance time to the next event
+        next_event_time = self._get_next_event_time(new_state)
+        new_state = self._advance_time(new_state, next_event_time)
+
+        # Compute timestep (use last action's timestep as base, then modify)
+        _, timestep = self._env.step(new_state, self.no_op)  # No-op to get updated state
+        timestep = timestep._replace(
+            reward=per_agent_rewards,
+            done=~jnp.any(new_state.ops_mask)
+        )
+
+        logger.info(f"Step: Ops_mask after={new_state.ops_mask}, Done={timestep.done}")
+        return new_state, timestep
+
+    def _validate_and_reward_actions(self, state: State, actions: chex.Array) -> Tuple[chex.Array, chex.Array]:
+        """
+        Validate actions and compute per-agent rewards.
+        Returns:
+            valid_actions_mask: Boolean array indicating valid actions (shape: [num_machines]).
+            per_agent_rewards: Rewards for each agent (shape: [num_machines]).
+        """
+        valid_actions_mask = []
+        per_agent_rewards = []
+
+        for machine_id, action in enumerate(actions):
+            is_valid = self._is_action_valid(state, machine_id, action)
+            valid_actions_mask.append(is_valid)
+
+            # Compute reward based on action
+            if is_valid and action != self.no_op:
+                reward = -1.0  # Example: Base reward for scheduling an operation
+                if jnp.any(state.ops_mask):
+                    reward += 2.0  # RewardWrapper logic
+            elif action == self.no_op and jnp.any(state.ops_mask):
+                reward = -10.0  # NoOpPenaltyWrapper logic
+            else:
+                reward = 0.0
+            per_agent_rewards.append(reward)
+
+        return jnp.array(valid_actions_mask), jnp.array(per_agent_rewards)
+
+    def _is_action_valid(self, state: State, machine_id: int, action: int) -> bool:
+        """
+        Check if the action is valid for the machine.
+        Args:
+            state: Current environment state.
+            machine_id: ID of the machine-agent.
+            action: Selected action (operation index or no-op).
+        Returns:
+            Boolean indicating if the action is valid.
+        """
+        if action == self.no_op:
+            return True  # No-op is always valid
+
+        # Convert action to job and operation indices
+        job_id = action // self.max_num_ops
+        op_id = action % self.max_num_ops
+
+        # Check if operation is available
+        if not state.ops_mask[job_id, op_id]:
+            return False
+
+        # Check if the operation is assigned to this machine
+        if state.ops_machine_ids[job_id, op_id] != machine_id:
+            return False
+
+        # Check if all predecessor operations for the job are completed
+        if op_id > 0 and jnp.any(state.ops_mask[job_id, :op_id]):
+            return False  # Earlier operations in the job are not yet scheduled
+
+        # Check if the machine is idle (simplified; adjust based on JobShop state)
+        return True
+
+    def _get_next_event_time(self, state: State) -> float:
+        """
+        Determine the time of the next event (e.g., operation completion).
+        Returns:
+            Time of the next event (float).
+        """
+        # Simplified: Use scheduled_times and ops_durations to find earliest completion
+        completion_times = state.scheduled_times + state.ops_durations
+        active_ops = completion_times * state.ops_mask
+        return jnp.min(active_ops, initial=jnp.inf, where=state.ops_mask)
+
+    def _advance_time(self, state: State, next_event_time: float) -> State:
+        """
+        Advance the environment time and update state.
+        Args:
+            state: Current state.
+            next_event_time: Time to advance to.
+        Returns:
+            Updated state.
+        """
+        # Simplified: Update scheduled_times and ops_mask
+        # This needs to be adapted to JobShop's internal state structure
+        return state  # Placeholder: Implement time advancement logic
+
 
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: JobShop, add_global_state: bool = False):
+        # Wrap the environment with multi-agent and other wrappers
+        env = MultiAgentActionWrapper(env)
+        env = ExtendedEpisodeWrapper(env)
+        env = NoOpPenaltyWrapper(env)
+        env = RewardWrapper(env)
         super().__init__(env, add_global_state)
         self._env: JobShop
         if self.time_limit is None:
@@ -145,14 +279,14 @@ class JobShopWrapper(JumanjiMarlWrapper):
         makespan = jnp.max(state.scheduled_times + raw.ops_durations, where=raw.ops_mask, initial=0)
         num_ops = jnp.sum(raw.ops_mask)
 
-        reward = timestep.reward[0] if hasattr(timestep.reward, 'ndim') and timestep.reward.ndim > 0 else timestep.reward
-        # Set terminal state only when no operations remain
-        is_terminal = ~jnp.any(raw.ops_mask)  # True if all ops are scheduled
+        reward = timestep.reward  # Already per-agent from MultiAgentActionWrapper
+        is_terminal = ~jnp.any(raw.ops_mask)
         step_type = jnp.where(
             is_terminal,
-            jnp.array(2, dtype=jnp.int32),  # Terminal (2)
-            jnp.array(1, dtype=jnp.int32)   # Mid-episode (1)
+            jnp.array(2, dtype=jnp.int32),
+            jnp.array(1, dtype=jnp.int32)
         )
+        logger.info(f"Modify timestep: Num_ops={num_ops}, Is_terminal={is_terminal}, Ops_mask={raw.ops_mask}")
         makespan_log = makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan
         num_ops_log = num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops
 
@@ -172,21 +306,21 @@ class JobShopWrapper(JumanjiMarlWrapper):
         for machine_id in range(self.num_agents):
             machine_ops_mask = (raw.ops_machine_ids == machine_id) & raw.ops_mask
             op_indices = jnp.where(machine_ops_mask.ravel(), size=max_ops_size, fill_value=-1)[0]
-            # Keep all indices, valid ones are >= 0, invalid are -1
             machine_ops_ids = jnp.zeros(max_ops_size, dtype=float)
             machine_ops_durations = jnp.zeros(max_ops_size, dtype=float)
             machine_ops_mask_array = jnp.zeros(max_ops_size, dtype=float)
+
             def update_arrays(i, arrays):
                 ids, durations, mask = arrays
-                # Only update if index is valid (>= 0)
                 valid = op_indices[i] >= 0
-                idx = jnp.where(valid, op_indices[i], 0)  # Use 0 as dummy index if invalid
+                idx = jnp.where(valid, op_indices[i], 0)
                 ids = jnp.where(valid, ids.at[i].set(raw.ops_machine_ids.ravel()[idx]), ids)
                 durations = jnp.where(valid, durations.at[i].set(raw.ops_durations.ravel()[idx]), durations)
                 mask = jnp.where(valid, mask.at[i].set(raw.ops_mask.ravel()[idx]), mask)
                 return ids, durations, mask
+
             machine_ops_ids, machine_ops_durations, machine_ops_mask_array = jax.lax.fori_loop(
-                0, max_ops_size,  # Use full size to ensure static shape
+                0, max_ops_size,
                 update_arrays,
                 (machine_ops_ids, machine_ops_durations, machine_ops_mask_array)
             )
@@ -213,16 +347,16 @@ class JobShopWrapper(JumanjiMarlWrapper):
         for machine_id in range(self.num_agents):
             machine_ops = (raw.ops_machine_ids == machine_id) & raw.ops_mask
             op_indices = jnp.where(machine_ops.ravel(), size=max_ops_size, fill_value=-1)[0]
-            # Set action mask for valid indices only
+
             def set_action_mask(i, mask):
                 valid = op_indices[i] >= 0
                 return jnp.where(valid, mask.at[machine_id, op_indices[i]].set(True), mask)
+
             action_mask = jax.lax.fori_loop(
                 0, max_ops_size,
                 set_action_mask,
                 action_mask
             )
-            # Conditionally set no-op action if no valid operations
             no_op_idx = self._env.num_jobs * self._env.max_num_ops
             has_ops = jnp.any(machine_ops)
             action_mask = jnp.where(
@@ -239,8 +373,8 @@ class JobShopWrapper(JumanjiMarlWrapper):
             step_count=step_count,
         )
 
-        reward = jnp.repeat(timestep.reward, self.num_agents)
-        discount = jnp.where(is_terminal, 0.0, 1.0)  # Set discount to 0 for terminal states
+        reward = aggregate_rewards(timestep.reward, self.num_agents)  # Ensure shared reward
+        discount = jnp.where(is_terminal, 0.0, 1.0)
 
         return timestep.replace(
             observation=obs,
@@ -257,9 +391,9 @@ class JobShopWrapper(JumanjiMarlWrapper):
         num_machines = self.num_agents
         max_ops_size = num_jobs * max_ops
         feature_dim = (
-            max_ops_size * 3
-            + 2
-            + max_ops_size * 4
+                max_ops_size * 3
+                + 2
+                + max_ops_size * 4
         )
         agents_view_spec = specs.Array(
             (num_machines, feature_dim),
