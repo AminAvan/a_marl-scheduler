@@ -146,7 +146,13 @@ class JobShopWrapper(JumanjiMarlWrapper):
         num_ops = jnp.sum(raw.ops_mask)
 
         reward = timestep.reward[0] if hasattr(timestep.reward, 'ndim') and timestep.reward.ndim > 0 else timestep.reward
-        is_terminal = (timestep.step_type == jnp.array(2) if not hasattr(timestep.step_type, 'ndim') or timestep.step_type.ndim == 0 else timestep.step_type[0] == jnp.array(2))
+        # Set terminal state only when no operations remain
+        is_terminal = ~jnp.any(raw.ops_mask)  # True if all ops are scheduled
+        step_type = jnp.where(
+            is_terminal,
+            jnp.array(2, dtype=jnp.int32),  # Terminal (2)
+            jnp.array(1, dtype=jnp.int32)   # Mid-episode (1)
+        )
         makespan_log = makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan
         num_ops_log = num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops
 
@@ -234,12 +240,13 @@ class JobShopWrapper(JumanjiMarlWrapper):
         )
 
         reward = jnp.repeat(timestep.reward, self.num_agents)
-        discount = jnp.repeat(timestep.discount, self.num_agents)
+        discount = jnp.where(is_terminal, 0.0, 1.0)  # Set discount to 0 for terminal states
 
         return timestep.replace(
             observation=obs,
             reward=reward,
             discount=discount,
+            step_type=step_type,
             extras=extras,
         )
 
