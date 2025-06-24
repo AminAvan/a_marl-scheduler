@@ -18,9 +18,26 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
-    team_reward = jnp.sum(reward, axis=-1)  # Sum across agents, preserve batch dim
-    return jnp.repeat(team_reward[:, None], num_agents, axis=-1)  # Shape: [num_envs, num_agents]
+def aggregate_rewards(reward: chex.Array, num_agents: int, num_envs: int = 1) -> chex.Array:
+    """
+    Aggregate rewards across agents, handling scalar or array rewards.
+    Args:
+        reward: Scalar or array of shape [num_envs] or [num_envs, num_agents].
+        num_agents: Number of agents (machines).
+        num_envs: Number of environments (default 1 for single env).
+    Returns:
+        Array of shape [num_envs, num_agents] with aggregated rewards.
+    """
+    # Handle scalar reward (e.g., at reset)
+    if reward.ndim == 0:
+        return jnp.zeros((num_envs, num_agents), dtype=reward.dtype)
+    # Handle batched rewards [num_envs]
+    if reward.ndim == 1:
+        team_reward = reward  # Already summed in environment
+        return jnp.repeat(team_reward[:, None], num_agents, axis=-1)
+    # Handle per-agent rewards [num_envs, num_agents]
+    team_reward = jnp.sum(reward, axis=-1)  # Sum across agents
+    return jnp.repeat(team_reward[:, None], num_agents, axis=-1)
 
 
 class JumanjiMarlWrapper(Wrapper, ABC):
@@ -38,13 +55,12 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         pass
 
     def get_global_state(self, obs: Observation) -> chex.Array:
-        global_state = jnp.concatenate(obs.agents_view, axis=-1)  # Concatenate along feature dim
-        global_state = jnp.tile(global_state, (self._env.num_agents, 1))  # Repeat for each agent
+        global_state = jnp.concatenate(obs.agents_view, axis=-1)
+        global_state = jnp.tile(global_state, (self._env.num_agents, 1))
         return global_state
 
     def reset(self, key: chex.PRNGKey) -> Tuple[State, TimeStep]:
         state, timestep = self._env.reset(key)
-        logger.info(f"Reset: Ops_mask={state.ops_mask}")
         timestep = self.modify_timestep(timestep, state)
         if self.add_global_state:
             global_state = self.get_global_state(timestep.observation)
@@ -173,9 +189,8 @@ class MultiAgentActionWrapper(Wrapper):
             next_state: Updated state.
             timestep: Updated timestep with observations, rewards, and termination.
         """
-        logger.info(f"Step: Actions={actions}, Ops_mask before={state.ops_mask}")
-
         is_batched = actions.ndim == 2
+        num_envs = actions.shape[0] if is_batched else 1
         actions = actions if is_batched else actions[None, :]  # Add batch dim if needed
         state = jax.tree_map(lambda x: x if x.ndim == state.ops_mask.ndim else x[None], state)
 
@@ -185,7 +200,7 @@ class MultiAgentActionWrapper(Wrapper):
             new_state = s
             for machine_id, (action, valid) in enumerate(zip(a, valid_mask)):
                 if valid:
-                    logger.info(f"Machine {machine_id} scheduling action {action}")
+                    logger.info(f"Machine {machine_id} scheduling action {action} in env")
                     new_state, _ = self._env.step(new_state, action)
             return new_state
 
@@ -204,7 +219,7 @@ class MultiAgentActionWrapper(Wrapper):
             done=~has_ops
         )
 
-        logger.info(f"Step: Ops_mask after={new_state.ops_mask}, Done={timestep.done}")
+        logger.info(f"Step: Done={timestep.done}")
         return new_state[0] if not is_batched else new_state, timestep
 
     def _validate_and_reward_actions(self, state: State, actions: chex.Array) -> Tuple[chex.Array, chex.Array]:
@@ -325,18 +340,19 @@ class JobShopWrapper(JumanjiMarlWrapper):
         raw = obs
 
         is_batched = state.ops_mask.ndim == 3
+        num_envs = state.ops_mask.shape[0] if is_batched else 1
         makespan = jnp.max(state.scheduled_times + raw.ops_durations, axis=(1, 2) if is_batched else (0, 1),
                            where=raw.ops_mask, initial=0)
         num_ops = jnp.sum(raw.ops_mask, axis=(1, 2) if is_batched else (0, 1))
 
-        reward = timestep.reward
+        reward = aggregate_rewards(timestep.reward, self.num_agents, num_envs)
         is_terminal = ~jnp.any(raw.ops_mask, axis=(1, 2) if is_batched else (0, 1))
         step_type = jnp.where(
             is_terminal,
             jnp.array(2, dtype=jnp.int32),
             jnp.array(1, dtype=jnp.int32)
         )
-        logger.info(f"Modify timestep: Num_ops={num_ops}, Is_terminal={is_terminal}, Ops_mask={raw.ops_mask}")
+        logger.info(f"Modify timestep: Num_ops={num_ops}, Is_terminal={is_terminal}")
         makespan_log = makespan[0] if is_batched else makespan
         num_ops_log = num_ops[0] if is_batched else num_ops
 
@@ -422,7 +438,6 @@ class JobShopWrapper(JumanjiMarlWrapper):
             step_count=step_count,
         )
 
-        reward = aggregate_rewards(timestep.reward, self.num_agents)
         discount = jnp.where(is_terminal, 0.0, 1.0)
 
         return timestep.replace(
