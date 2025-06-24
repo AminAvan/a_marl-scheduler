@@ -39,7 +39,6 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         state, timestep = self._env.reset(key)
         timestep = self.modify_timestep(timestep, state)
         ## added for test ##
-        state = super().reset() ## added for test ##
         print(f"Reset state - ops_mask: {state.ops_mask}") ## added for test ##
         ## added for test ##
         if self.add_global_state:
