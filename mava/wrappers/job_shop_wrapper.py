@@ -38,9 +38,6 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def reset(self, key: chex.PRNGKey) -> Tuple[State, TimeStep]:
         state, timestep = self._env.reset(key)
         timestep = self.modify_timestep(timestep, state)
-        ## added for test ##
-        print(f"Reset state - ops_mask: {state.ops_mask}") ## added for test ##
-        ## added for test ##
         if self.add_global_state:
             global_state = self.get_global_state(timestep.observation)
             observation = ObservationGlobalState(
