@@ -156,15 +156,18 @@ class MultiAgentActionWrapper(Wrapper):
         return valid_actions_mask, per_agent_rewards
 
     def _is_action_valid(self, ops_mask: chex.Array, ops_machine_ids: chex.Array, machine_id: int, action: int) -> bool:
-        if action == self.no_op:
-            return True
+        is_no_op = action == self.no_op
         job_id = action // self.max_num_ops
         op_id = action % self.max_num_ops
-        return (
-            ops_mask[job_id, op_id] and
-            ops_machine_ids[job_id, op_id] == machine_id and
-            (op_id == 0 or not jnp.any(ops_mask[job_id, :op_id]))
+        # Check validity for non-no-op actions
+        valid_op = (
+                (job_id < self.num_jobs) & (op_id < self.max_num_ops) &
+                ops_mask[job_id, op_id] &
+                (ops_machine_ids[job_id, op_id] == machine_id) &
+                ((op_id == 0) | ~jnp.any(ops_mask[job_id, :op_id]))
         )
+        # Return True for no-op, otherwise check operation validity
+        return jnp.where(is_no_op, True, valid_op)
 
     def _get_next_event_time(self, state: State) -> chex.Array:
         completion_times = state.scheduled_times + state.ops_durations
