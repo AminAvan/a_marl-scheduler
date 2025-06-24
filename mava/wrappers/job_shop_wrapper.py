@@ -145,21 +145,20 @@ class NoOpPenaltyWrapper(Wrapper):
         has_ops = jnp.any(state.ops_mask, axis=(1, 2) if state.ops_mask.ndim == 3 else (0, 1))
         is_batched = state.ops_mask.ndim == 3
 
-        def single_step(s, a, penalty):
-            next_state, next_reward, done, info = self._env.step(s, a)
-            return (next_state, jnp.where(penalty, -10.0, next_reward), done, info)
+        def single_step(s, a):
+            return self._env.step(s, a)
 
         if is_batched:
-            penalty_case = is_no_op & has_ops
-            result = jax.vmap(single_step)(state, action, penalty_case)
-            return result
+            penalty_case = is_no_op & has_ops[:, None]  # Shape: [num_envs, num_machines]
+            next_state, next_reward, done, info = jax.vmap(single_step)(state, action)
+            reward = jnp.where(penalty_case, -10.0, next_reward)
+            done = jnp.where(penalty_case, False, done)
+            return next_state, reward, done, info
         else:
             penalty_case = is_no_op & has_ops
-            return jax.lax.cond(
-                penalty_case,
-                lambda: (state, -10.0, False, {}),
-                lambda: single_step(state, action, False)
-            )
+            if penalty_case.any():
+                return state, jnp.full_like(action, -10.0), False, {}
+            return single_step(state, action)
 
 
 class ExtendedEpisodeWrapper(Wrapper):
