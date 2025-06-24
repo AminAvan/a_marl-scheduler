@@ -165,7 +165,8 @@ class JobShopWrapper(JumanjiMarlWrapper):
         agents_view = []
         for machine_id in range(self.num_agents):
             machine_ops_mask = (raw.ops_machine_ids == machine_id) & raw.ops_mask
-            op_indices = jnp.where(machine_ops_mask.ravel())[0]
+            op_indices = jnp.where(machine_ops_mask.ravel(), size=max_ops_size, fill_value=-1)[0]
+            valid_op_indices = op_indices[op_indices >= 0]  # Filter out padded indices
             machine_ops_ids = jnp.zeros(max_ops_size, dtype=float)
             machine_ops_durations = jnp.zeros(max_ops_size, dtype=float)
             machine_ops_mask_array = jnp.zeros(max_ops_size, dtype=float)
@@ -176,8 +177,8 @@ class JobShopWrapper(JumanjiMarlWrapper):
                 mask = mask.at[idx].set(raw.ops_mask.ravel()[idx])
                 return ids, durations, mask
             machine_ops_ids, machine_ops_durations, machine_ops_mask_array = jax.lax.fori_loop(
-                0, jnp.minimum(op_indices.size, max_ops_size),
-                lambda i, arrays: update_arrays(op_indices[i], arrays),
+                0, jnp.minimum(valid_op_indices.size, max_ops_size),
+                lambda i, arrays: update_arrays(valid_op_indices[i], arrays),
                 (machine_ops_ids, machine_ops_durations, machine_ops_mask_array)
             )
             machine_ops_features = jnp.concatenate([
@@ -202,8 +203,9 @@ class JobShopWrapper(JumanjiMarlWrapper):
         action_mask = jnp.zeros((self.num_agents, raw.action_mask.shape[-1]), dtype=bool)
         for machine_id in range(self.num_agents):
             machine_ops = (raw.ops_machine_ids == machine_id) & raw.ops_mask
-            op_indices = jnp.where(machine_ops.ravel())[0]
-            action_mask = action_mask.at[machine_id, op_indices].set(True)
+            op_indices = jnp.where(machine_ops.ravel(), size=max_ops_size, fill_value=-1)[0]
+            valid_op_indices = op_indices[op_indices >= 0]  # Filter out padded indices
+            action_mask = action_mask.at[machine_id, valid_op_indices].set(True)
             if not jnp.any(machine_ops):
                 action_mask = action_mask.at[machine_id, self._env.num_jobs * self._env.max_num_ops].set(True)
 
