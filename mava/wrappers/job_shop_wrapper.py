@@ -216,8 +216,14 @@ class JobShopWrapper(JumanjiMarlWrapper):
                 set_action_mask,
                 action_mask
             )
-            if not jnp.any(machine_ops):
-                action_mask = action_mask.at[machine_id, self._env.num_jobs * self._env.max_num_ops].set(True)
+            # Conditionally set no-op action if no valid operations
+            no_op_idx = self._env.num_jobs * self._env.max_num_ops
+            has_ops = jnp.any(machine_ops)
+            action_mask = jnp.where(
+                ~has_ops,
+                action_mask.at[machine_id, no_op_idx].set(True),
+                action_mask
+            )
 
         step_count = jnp.repeat(state.step_count, self.num_agents)
 
