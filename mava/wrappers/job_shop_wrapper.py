@@ -196,7 +196,7 @@ class MultiAgentActionWrapper(Wrapper):
         is_batched = actions.ndim == 2
         num_envs = actions.shape[0] if is_batched else 1
         actions = actions if is_batched else actions[None, :]
-        state = jax.tree_map(lambda x: x if x.ndim == state.ops_mask.ndim else x[None], state)
+        state = jax.tree_map(lambda x: x if x.ndim == state.ops_mask.ndim else x[None, ...], state)
 
         valid_actions_mask, per_agent_rewards = self._validate_and_reward_actions(state, actions)
 
@@ -241,8 +241,10 @@ class MultiAgentActionWrapper(Wrapper):
         def validate_single_env(s, a):
             valid_actions = []
             rewards = []
+            # Ensure action_mask is properly shaped for single environment
+            action_mask = s.action_mask if s.action_mask.ndim == 2 else s.action_mask[0]
             for machine_id, action in enumerate(a):
-                is_valid = self._is_action_valid(s, machine_id, action)
+                is_valid = self._is_action_valid(s, machine_id, action, action_mask)
                 valid_actions.append(is_valid)
                 reward = jnp.where(
                     is_valid & (action != self.no_op),
@@ -253,19 +255,22 @@ class MultiAgentActionWrapper(Wrapper):
             return jnp.array(valid_actions), jnp.array(rewards)
 
         if is_batched:
-            valid_actions_mask, per_agent_rewards = jax.vmap(validate_single_env)(state, actions)
+            # Ensure state fields are batched correctly
+            state = jax.tree_map(lambda x: x if x.ndim >= 2 else x[None, ...], state)
+            valid_actions_mask, per_agent_rewards = jax.vmap(validate_single_env, in_axes=(0, 0))(state, actions)
         else:
             valid_actions_mask, per_agent_rewards = validate_single_env(state[0], actions[0])
 
         return valid_actions_mask, per_agent_rewards
 
-    def _is_action_valid(self, state: State, machine_id: int, action: int) -> bool:
+    def _is_action_valid(self, state: State, machine_id: int, action: int, action_mask: chex.Array) -> bool:
         """
         Check if the action is valid for the machine.
         Args:
             state: Single environment state.
             machine_id: Machine ID.
             action: Action (operation index or no-op).
+            action_mask: Action mask for the machine, shape: [num_machines, action_dim] or [action_dim].
         Returns:
             Boolean indicating if the action is valid.
         """
@@ -284,7 +289,8 @@ class MultiAgentActionWrapper(Wrapper):
         if op_id > 0 and jnp.any(state.ops_mask[job_id, :op_id]):
             return False
 
-        return True
+        # Check action_mask
+        return action_mask[machine_id, action]
 
     def _get_next_event_time(self, state: State) -> float:
         """
