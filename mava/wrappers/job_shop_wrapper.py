@@ -98,20 +98,20 @@ class RewardWrapper(JobShop):
         next_state, timestep = super().step(state, action)
         reward = timestep.reward
         if action != self.num_jobs * self.max_num_ops and jnp.any(state.ops_mask):
-            reward += 2.0  # Reward for scheduling
+            reward += 2.0
         return next_state, timestep._replace(reward=reward)
 
 class NoOpPenaltyWrapper(JobShop):
     def step(self, state, action):
         if action == self.num_jobs * self.max_num_ops and jnp.any(state.ops_mask):
-            return state, -10.0, False, {}  # Penalize no-op
+            return state, -10.0, False, {}
         return super().step(state, action)
 
 class ExtendedEpisodeWrapper(JobShop):
     def step(self, state, action):
         next_state, timestep = super().step(state, action)
         if jnp.any(state.ops_mask):
-            timestep = timestep._replace(done=False)  # Prevent early termination
+            timestep = timestep._replace(done=False)
         return next_state, timestep
 
 class ActionAggregationWrapper(JobShop):
@@ -121,7 +121,6 @@ class ActionAggregationWrapper(JobShop):
         self.num_agents = self._env.generator.num_machines
 
     def step(self, state, actions: chex.Array) -> Tuple[State, TimeStep]:
-        # Select first non-no-op action
         no_op = self._env.num_jobs * self._env.max_num_ops
         valid_actions = jnp.where(actions != no_op)[0]
         selected_action = actions[valid_actions[0]] if valid_actions.size > 0 else no_op
@@ -135,7 +134,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
             num_jobs = self._env.generator.num_jobs
             max_num_ops = self._env.generator.max_num_ops
             max_op_duration = self._env.generator.max_op_duration
-            self.time_limit = num_jobs * max_num_ops * max_op_duration  # e.g., 5 * 4 * 4 = 80
+            self.time_limit = num_jobs * max_num_ops * max_op_duration
 
     def modify_timestep(self, timestep: TimeStep, state) -> TimeStep[Observation]:
         obs = timestep.observation
@@ -160,41 +159,51 @@ class JobShopWrapper(JumanjiMarlWrapper):
             }
         }
 
-        # Fixed: Machine-specific observations
+        num_jobs = self._env.generator.num_jobs
+        max_num_ops = self._env.generator.max_num_ops
+        max_ops_size = num_jobs * max_num_ops
         agents_view = []
         for machine_id in range(self.num_agents):
-            # Filter ops for this machine
             machine_ops_mask = (raw.ops_machine_ids == machine_id) & raw.ops_mask
+            op_indices = jnp.where(machine_ops_mask.ravel())[0]
+            machine_ops_ids = jnp.zeros(max_ops_size, dtype=float)
+            machine_ops_durations = jnp.zeros(max_ops_size, dtype=float)
+            machine_ops_mask_array = jnp.zeros(max_ops_size, dtype=float)
+            def update_arrays(idx, arrays):
+                ids, durations, mask = arrays
+                ids = ids.at[idx].set(raw.ops_machine_ids.ravel()[idx])
+                durations = durations.at[idx].set(raw.ops_durations.ravel()[idx])
+                mask = mask.at[idx].set(raw.ops_mask.ravel()[idx])
+                return ids, durations, mask
+            machine_ops_ids, machine_ops_durations, machine_ops_mask_array = jax.lax.fori_loop(
+                0, jnp.minimum(op_indices.size, max_ops_size),
+                lambda i, arrays: update_arrays(op_indices[i], arrays),
+                (machine_ops_ids, machine_ops_durations, machine_ops_mask_array)
+            )
             machine_ops_features = jnp.concatenate([
-                raw.ops_machine_ids[machine_ops_mask].ravel().astype(float),
-                raw.ops_durations[machine_ops_mask].ravel().astype(float),
-                raw.ops_mask[machine_ops_mask].ravel().astype(float),
+                machine_ops_ids,
+                machine_ops_durations,
+                machine_ops_mask_array,
             ])
-            # Machine-specific state
             machine_state = jnp.array([
                 raw.machines_job_ids[machine_id].astype(float),
                 raw.machines_remaining_times[machine_id].astype(float),
             ])
-            # Global context
             global_features = jnp.concatenate([
                 raw.ops_machine_ids.ravel().astype(float),
                 raw.ops_durations.ravel().astype(float),
                 raw.ops_mask.ravel().astype(float),
                 state.scheduled_times.ravel().astype(float),
             ])
-            # Combine
             agent_view = jnp.concatenate([machine_ops_features, machine_state, global_features])
             agents_view.append(agent_view)
         agents_view = jnp.stack(agents_view)
 
-        # Fixed: Machine-specific action mask
         action_mask = jnp.zeros((self.num_agents, raw.action_mask.shape[-1]), dtype=bool)
         for machine_id in range(self.num_agents):
-            # Allow no-op and ops for this machine
             machine_ops = (raw.ops_machine_ids == machine_id) & raw.ops_mask
-            op_indices = jnp.where(machine_ops.ravel())[0]  # Extract indices from tuple
+            op_indices = jnp.where(machine_ops.ravel())[0]
             action_mask = action_mask.at[machine_id, op_indices].set(True)
-            # Allow no-op only if no ops available
             if not jnp.any(machine_ops):
                 action_mask = action_mask.at[machine_id, self._env.num_jobs * self._env.max_num_ops].set(True)
 
@@ -206,7 +215,6 @@ class JobShopWrapper(JumanjiMarlWrapper):
             step_count=step_count,
         )
 
-        # Use reward from wrappers
         reward = jnp.repeat(timestep.reward, self.num_agents)
         discount = jnp.repeat(timestep.discount, self.num_agents)
 
@@ -222,18 +230,11 @@ class JobShopWrapper(JumanjiMarlWrapper):
         env_spec = self._env.observation_spec
         num_jobs, max_ops = env_spec.ops_machine_ids.shape
         num_machines = self.num_agents
-        # Fixed: Adjust feature_dim for machine-specific observations
-        max_machine_ops = num_jobs * max_ops  # Max possible ops per machine
+        max_ops_size = num_jobs * max_ops
         feature_dim = (
-            max_machine_ops  # ops_machine_ids
-            + max_machine_ops  # ops_durations
-            + max_machine_ops  # ops_mask
-            + 1  # machines_job_ids
-            + 1  # machines_remaining_times
-            + num_jobs * max_ops  # global ops_machine_ids
-            + num_jobs * max_ops  # global ops_durations
-            + num_jobs * max_ops  # global ops_mask
-            + num_jobs * max_ops  # global scheduled_times
+            max_ops_size * 3
+            + 2
+            + max_ops_size * 4
         )
         agents_view_spec = specs.Array(
             (num_machines, feature_dim),
