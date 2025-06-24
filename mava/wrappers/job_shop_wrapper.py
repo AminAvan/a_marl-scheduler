@@ -120,6 +120,7 @@ class RewardWrapper(Wrapper):
         super().__init__(env)
         self.num_jobs = self._env.generator.num_jobs
         self.max_num_ops = self._env.generator.max_num_ops
+        self.action_dim = self.num_jobs * self.max_num_ops + 1
 
     def step(self, state, action):
         next_state, timestep = self._env.step(state, action)
@@ -138,6 +139,7 @@ class NoOpPenaltyWrapper(Wrapper):
         super().__init__(env)
         self.num_jobs = self._env.generator.num_jobs
         self.max_num_ops = self._env.generator.max_num_ops
+        self.action_dim = self.num_jobs * self.max_num_ops + 1
 
     def step(self, state, action):
         no_op = self.num_jobs * self.max_num_ops
@@ -167,6 +169,7 @@ class ExtendedEpisodeWrapper(Wrapper):
         super().__init__(env)
         self.num_jobs = self._env.generator.num_jobs
         self.max_num_ops = self._env.generator.max_num_ops
+        self.action_dim = self.num_jobs * self.max_num_ops + 1
 
     def step(self, state, action):
         next_state, timestep = self._env.step(state, action)
@@ -266,7 +269,7 @@ class MultiAgentActionWrapper(Wrapper):
                 machines_job_ids=state.machines_job_ids,
                 machines_remaining_times=state.machines_remaining_times,
                 step_count=state.step_count,
-                key=state.key  # Include key to maintain structure
+                key=state.key
             )
             valid_actions_mask, per_agent_rewards = jax.vmap(validate_single_env, in_axes=(0, 0))(relevant_state,
                                                                                                   actions)
@@ -350,11 +353,12 @@ class JobShopWrapper(JumanjiMarlWrapper):
         env = RewardWrapper(env)
         super().__init__(env, add_global_state)
         self._env: JobShop
+        self.num_jobs = self._env.generator.num_jobs
+        self.max_num_ops = self._env.generator.max_num_ops
+        self.action_dim = self.num_jobs * self.max_num_ops + 1
         if self.time_limit is None:
-            num_jobs = self._env.generator.num_jobs
-            max_num_ops = self._env.generator.max_num_ops
             max_op_duration = self._env.generator.max_op_duration
-            self.time_limit = num_jobs * max_num_ops * max_op_duration
+            self.time_limit = self.num_jobs * self.max_num_ops * max_op_duration
 
     def modify_timestep(self, timestep: TimeStep, state) -> TimeStep[Observation]:
         obs = timestep.observation
@@ -388,9 +392,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
             }
         }
 
-        num_jobs = self._env.generator.num_jobs
-        max_num_ops = self._env.generator.max_num_ops
-        max_ops_size = num_jobs * max_num_ops
+        max_ops_size = self.num_jobs * self.max_num_ops
         agents_view = []
         for machine_id in range(self.num_agents):
             machine_ops_mask = (raw.ops_machine_ids == machine_id) & raw.ops_mask
@@ -449,7 +451,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
             action_mask = jax.lax.fori_loop(0, max_ops_size, set_action_mask, action_mask)
 
-        no_op_idx = self._env.num_jobs * self._env.max_num_ops
+        no_op_idx = self.num_jobs * self.max_num_ops
         has_ops = jnp.any(raw.ops_mask, axis=(-2, -1))
         action_mask = action_mask.at[..., no_op_idx].set(~has_ops)
 
@@ -474,10 +476,9 @@ class JobShopWrapper(JumanjiMarlWrapper):
     @cached_property
     def observation_spec(self) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
         env_spec = self._env.observation_spec
-        num_jobs, max_ops = env_spec.ops_machine_ids.shape
         num_machines = self.num_agents
-        max_ops_size = num_jobs * max_ops
-        action_dim = num_jobs * max_ops + 1
+        max_ops_size = self.num_jobs * self.max_num_ops
+        action_dim = self.num_jobs * self.max_num_ops + 1
         feature_dim = (
                 max_ops_size * 3
                 + 2
