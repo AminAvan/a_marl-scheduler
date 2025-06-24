@@ -155,10 +155,11 @@ class NoOpPenaltyWrapper(Wrapper):
             done = jnp.where(penalty_case, False, done)
             return next_state, reward, done, info
         else:
-            penalty_case = is_no_op & has_ops
-            if penalty_case.any():
-                return state, jnp.full_like(action, -10.0), False, {}
-            return single_step(state, action)
+            penalty_case = is_no_op & has_ops  # Shape: [num_machines]
+            next_state, next_reward, done, info = single_step(state, action)
+            reward = jnp.where(penalty_case, -10.0, next_reward)
+            done = jnp.where(penalty_case, False, done)
+            return next_state, reward, done, info
 
 
 class ExtendedEpisodeWrapper(Wrapper):
