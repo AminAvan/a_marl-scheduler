@@ -28,15 +28,12 @@ def aggregate_rewards(reward: chex.Array, num_agents: int, num_envs: int = 1) ->
     Returns:
         Array of shape [num_envs, num_agents] with aggregated rewards.
     """
-    # Handle scalar reward (e.g., at reset)
     if reward.ndim == 0:
         return jnp.zeros((num_envs, num_agents), dtype=reward.dtype)
-    # Handle batched rewards [num_envs]
     if reward.ndim == 1:
-        team_reward = reward  # Already summed in environment
+        team_reward = reward
         return jnp.repeat(team_reward[:, None], num_agents, axis=-1)
-    # Handle per-agent rewards [num_envs, num_agents]
-    team_reward = jnp.sum(reward, axis=-1)  # Sum across agents
+    team_reward = jnp.sum(reward, axis=-1)
     return jnp.repeat(team_reward[:, None], num_agents, axis=-1)
 
 
@@ -146,24 +143,31 @@ class NoOpPenaltyWrapper(Wrapper):
         no_op = self.num_jobs * self.max_num_ops
         is_no_op = action == no_op
         has_ops = jnp.any(state.ops_mask, axis=(1, 2) if state.ops_mask.ndim == 3 else (0, 1))
-        if state.ops_mask.ndim == 3:  # Batched case
+        is_batched = state.ops_mask.ndim == 3
+
+        def single_step(s, a, penalty):
+            next_state, next_reward, done, info = self._env.step(s, a)
+            return (next_state, jnp.where(penalty, -10.0, next_reward), done, info)
+
+        if is_batched:
             penalty_case = is_no_op & has_ops
-            return jax.tree_map(
-                lambda s, a: jax.lax.cond(
-                    penalty_case,
-                    lambda: (s, -10.0, False, {}),
-                    lambda: self._env.step(s, a),
-                ),
-                state,
-                action
+            result = jax.vmap(single_step)(state, action, penalty_case)
+            return result
+        else:
+            penalty_case = is_no_op & has_ops
+            return jax.lax.cond(
+                penalty_case,
+                lambda: (state, -10.0, False, {}),
+                lambda: single_step(state, action, False)
             )
-        else:  # Single environment case
-            if is_no_op and has_ops:
-                return state, -10.0, False, {}
-            return self._env.step(state, action)
 
 
 class ExtendedEpisodeWrapper(Wrapper):
+    def __init__(self, env: JobShop):
+        super().__init__(env)
+        self.num_jobs = self._env.generator.num_jobs
+        self.max_num_ops = self._env.generator.max_num_ops
+
     def step(self, state, action):
         next_state, timestep = self._env.step(state, action)
         has_ops = jnp.any(state.ops_mask, axis=(1, 2) if state.ops_mask.ndim == 3 else (0, 1))
@@ -191,7 +195,7 @@ class MultiAgentActionWrapper(Wrapper):
         """
         is_batched = actions.ndim == 2
         num_envs = actions.shape[0] if is_batched else 1
-        actions = actions if is_batched else actions[None, :]  # Add batch dim if needed
+        actions = actions if is_batched else actions[None, :]
         state = jax.tree_map(lambda x: x if x.ndim == state.ops_mask.ndim else x[None], state)
 
         valid_actions_mask, per_agent_rewards = self._validate_and_reward_actions(state, actions)
@@ -427,8 +431,8 @@ class JobShopWrapper(JumanjiMarlWrapper):
             action_mask = jax.lax.fori_loop(0, max_ops_size, set_action_mask, action_mask)
 
         no_op_idx = self._env.num_jobs * self._env.max_num_ops
-        has_ops = jnp.any(raw.ops_mask, axis=(-2, -1))  # Shape: [num_envs]
-        action_mask = action_mask.at[..., no_op_idx].set(~has_ops)  # Broadcast across agents
+        has_ops = jnp.any(raw.ops_mask, axis=(-2, -1))
+        action_mask = action_mask.at[..., no_op_idx].set(~has_ops)
 
         step_count = jnp.repeat(state.step_count[..., None], self.num_agents, axis=-1)
 
