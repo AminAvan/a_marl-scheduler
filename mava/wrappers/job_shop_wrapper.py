@@ -112,7 +112,6 @@ class RewardWrapper(Wrapper):
         next_state, timestep = self._env.step(state, action)
         reward = timestep.reward
         no_op = self.num_jobs * self.max_num_ops
-        # Handle batched or single actions
         reward = jnp.where(
             (action != no_op) & jnp.any(state.ops_mask, axis=(1, 2) if state.ops_mask.ndim == 3 else (0, 1)),
             reward + 2.0,
@@ -129,16 +128,15 @@ class NoOpPenaltyWrapper(Wrapper):
 
     def step(self, state, action):
         no_op = self.num_jobs * self.max_num_ops
-        # Handle batched or single actions
         is_no_op = action == no_op
         has_ops = jnp.any(state.ops_mask, axis=(1, 2) if state.ops_mask.ndim == 3 else (0, 1))
         if state.ops_mask.ndim == 3:  # Batched case
             penalty_case = is_no_op & has_ops
             return jax.tree_map(
-                lambda s, r: jax.lax.cond(
+                lambda s, a: jax.lax.cond(
                     penalty_case,
                     lambda: (s, -10.0, False, {}),
-                    lambda: self._env.step(s, action),
+                    lambda: self._env.step(s, a),
                 ),
                 state,
                 action
@@ -152,7 +150,6 @@ class NoOpPenaltyWrapper(Wrapper):
 class ExtendedEpisodeWrapper(Wrapper):
     def step(self, state, action):
         next_state, timestep = self._env.step(state, action)
-        # Handle batched or single state
         has_ops = jnp.any(state.ops_mask, axis=(1, 2) if state.ops_mask.ndim == 3 else (0, 1))
         done = jnp.where(has_ops, False, timestep.done)
         return next_state, timestep._replace(done=done)
@@ -178,15 +175,12 @@ class MultiAgentActionWrapper(Wrapper):
         """
         logger.info(f"Step: Actions={actions}, Ops_mask before={state.ops_mask}")
 
-        # Handle batched or single actions
         is_batched = actions.ndim == 2
         actions = actions if is_batched else actions[None, :]  # Add batch dim if needed
         state = jax.tree_map(lambda x: x if x.ndim == state.ops_mask.ndim else x[None], state)
 
-        # Validate actions and compute rewards
         valid_actions_mask, per_agent_rewards = self._validate_and_reward_actions(state, actions)
 
-        # Schedule valid operations
         def step_single_env(s, a, valid_mask):
             new_state = s
             for machine_id, (action, valid) in enumerate(zip(a, valid_mask)):
@@ -198,11 +192,9 @@ class MultiAgentActionWrapper(Wrapper):
         new_state = jax.vmap(step_single_env)(state, actions, valid_actions_mask) if is_batched else step_single_env(
             state[0], actions[0], valid_actions_mask[0])
 
-        # Advance time
         next_event_time = self._get_next_event_time(new_state)
         new_state = self._advance_time(new_state, next_event_time)
 
-        # Compute timestep
         _, timestep = jax.vmap(self._env.step)(new_state,
                                                jnp.full_like(actions, self.no_op)) if is_batched else self._env.step(
             new_state, self.no_op)
@@ -413,20 +405,14 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
             def set_action_mask(i, mask):
                 valid = op_indices[i] >= 0
-                return jnp.where(valid, mask.at[..., machine_id, op_indices[i]].set(True), mask)
+                idx = op_indices[i]
+                return jnp.where(valid, mask.at[..., machine_id, idx].set(True), mask)
 
-            action_mask = jax.lax.fori_loop(
-                0, max_ops_size,
-                set_action_mask,
-                action_mask
-            )
-            no_op_idx = self._env.num_jobs * self._env.max_num_ops
-            has_ops = jnp.any(machine_ops, axis=-1)
-            action_mask = jnp.where(
-                ~has_ops,
-                action_mask.at[..., machine_id, no_op_idx].set(True),
-                action_mask
-            )
+            action_mask = jax.lax.fori_loop(0, max_ops_size, set_action_mask, action_mask)
+
+        no_op_idx = self._env.num_jobs * self._env.max_num_ops
+        has_ops = jnp.any(raw.ops_mask, axis=(-2, -1))  # Shape: [num_envs]
+        action_mask = action_mask.at[..., no_op_idx].set(~has_ops)  # Broadcast across agents
 
         step_count = jnp.repeat(state.step_count[..., None], self.num_agents, axis=-1)
 
