@@ -19,8 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 def aggregate_rewards(reward: chex.Array, num_agents: int) -> chex.Array:
-    team_reward = jnp.sum(reward)
-    return jnp.repeat(team_reward, num_agents)
+    team_reward = jnp.sum(reward, axis=-1)  # Sum across agents, preserve batch dim
+    return jnp.repeat(team_reward[:, None], num_agents, axis=-1)  # Shape: [num_envs, num_agents]
 
 
 class JumanjiMarlWrapper(Wrapper, ABC):
@@ -38,8 +38,8 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         pass
 
     def get_global_state(self, obs: Observation) -> chex.Array:
-        global_state = jnp.concatenate(obs.agents_view, axis=0)
-        global_state = jnp.tile(global_state, (self._env.num_agents, 1))
+        global_state = jnp.concatenate(obs.agents_view, axis=-1)  # Concatenate along feature dim
+        global_state = jnp.tile(global_state, (self._env.num_agents, 1))  # Repeat for each agent
         return global_state
 
     def reset(self, key: chex.PRNGKey) -> Tuple[State, TimeStep]:
@@ -111,8 +111,13 @@ class RewardWrapper(Wrapper):
     def step(self, state, action):
         next_state, timestep = self._env.step(state, action)
         reward = timestep.reward
-        if action != self.num_jobs * self.max_num_ops and jnp.any(state.ops_mask):
-            reward += 2.0
+        no_op = self.num_jobs * self.max_num_ops
+        # Handle batched or single actions
+        reward = jnp.where(
+            (action != no_op) & jnp.any(state.ops_mask, axis=(1, 2) if state.ops_mask.ndim == 3 else (0, 1)),
+            reward + 2.0,
+            reward
+        )
         return next_state, timestep._replace(reward=reward)
 
 
@@ -123,17 +128,34 @@ class NoOpPenaltyWrapper(Wrapper):
         self.max_num_ops = self._env.generator.max_num_ops
 
     def step(self, state, action):
-        if action == self.num_jobs * self.max_num_ops and jnp.any(state.ops_mask):
-            return state, -10.0, False, {}
-        return self._env.step(state, action)
+        no_op = self.num_jobs * self.max_num_ops
+        # Handle batched or single actions
+        is_no_op = action == no_op
+        has_ops = jnp.any(state.ops_mask, axis=(1, 2) if state.ops_mask.ndim == 3 else (0, 1))
+        if state.ops_mask.ndim == 3:  # Batched case
+            penalty_case = is_no_op & has_ops
+            return jax.tree_map(
+                lambda s, r: jax.lax.cond(
+                    penalty_case,
+                    lambda: (s, -10.0, False, {}),
+                    lambda: self._env.step(s, action),
+                ),
+                state,
+                action
+            )
+        else:  # Single environment case
+            if is_no_op and has_ops:
+                return state, -10.0, False, {}
+            return self._env.step(state, action)
 
 
 class ExtendedEpisodeWrapper(Wrapper):
     def step(self, state, action):
         next_state, timestep = self._env.step(state, action)
-        if jnp.any(state.ops_mask):
-            timestep = timestep._replace(done=False)
-        return next_state, timestep
+        # Handle batched or single state
+        has_ops = jnp.any(state.ops_mask, axis=(1, 2) if state.ops_mask.ndim == 3 else (0, 1))
+        done = jnp.where(has_ops, False, timestep.done)
+        return next_state, timestep._replace(done=done)
 
 
 class MultiAgentActionWrapper(Wrapper):
@@ -148,310 +170,70 @@ class MultiAgentActionWrapper(Wrapper):
         """
         Process simultaneous actions from all machine-agents.
         Args:
-            state: Current environment state.
-            actions: Array of actions, one per machine (shape: [num_machines]).
+            state: Current environment state (batched or single).
+            actions: Array of actions, shape: [num_envs, num_machines] or [num_machines].
         Returns:
-            next_state: Updated state after processing all valid actions.
+            next_state: Updated state.
             timestep: Updated timestep with observations, rewards, and termination.
         """
         logger.info(f"Step: Actions={actions}, Ops_mask before={state.ops_mask}")
 
-        # Validate actions and compute per-agent rewards
+        # Handle batched or single actions
+        is_batched = actions.ndim == 2
+        actions = actions if is_batched else actions[None, :]  # Add batch dim if needed
+        state = jax.tree_map(lambda x: x if x.ndim == state.ops_mask.ndim else x[None], state)
+
+        # Validate actions and compute rewards
         valid_actions_mask, per_agent_rewards = self._validate_and_reward_actions(state, actions)
 
         # Schedule valid operations
-        new_state = state
-        for machine_id, action in enumerate(actions):
-            if valid_actions_mask[machine_id]:
-                logger.info(f"Machine {machine_id} scheduling action {action}")
-                new_state, single_timestep = self._env.step(new_state, action)
-                logger.info(f"Machine {machine_id} action {action}: New ops_mask={new_state.ops_mask}")
+        def step_single_env(s, a, valid_mask):
+            new_state = s
+            for machine_id, (action, valid) in enumerate(zip(a, valid_mask)):
+                if valid:
+                    logger.info(f"Machine {machine_id} scheduling action {action}")
+                    new_state, _ = self._env.step(new_state, action)
+            return new_state
 
-        # Advance time to the next event
+        new_state = jax.vmap(step_single_env)(state, actions, valid_actions_mask) if is_batched else step_single_env(
+            state[0], actions[0], valid_actions_mask[0])
+
+        # Advance time
         next_event_time = self._get_next_event_time(new_state)
         new_state = self._advance_time(new_state, next_event_time)
 
-        # Compute timestep (use no-op to get updated observations)
-        _, timestep = self._env.step(new_state, self.no_op)
+        # Compute timestep
+        _, timestep = jax.vmap(self._env.step)(new_state,
+                                               jnp.full_like(actions, self.no_op)) if is_batched else self._env.step(
+            new_state, self.no_op)
+        has_ops = jnp.any(new_state.ops_mask, axis=(1, 2) if new_state.ops_mask.ndim == 3 else (0, 1))
         timestep = timestep._replace(
             reward=per_agent_rewards,
-            done=~jnp.any(new_state.ops_mask)
+            done=~has_ops
         )
 
         logger.info(f"Step: Ops_mask after={new_state.ops_mask}, Done={timestep.done}")
-        return new_state, timestep
+        return new_state[0] if not is_batched else new_state, timestep
 
     def _validate_and_reward_actions(self, state: State, actions: chex.Array) -> Tuple[chex.Array, chex.Array]:
         """
         Validate actions and compute per-agent rewards.
-        Returns:
-            valid_actions_mask: Boolean array indicating valid actions (shape: [num_machines]).
-            per_agent_rewards: Rewards for each agent (shape: [num_machines]).
-        """
-        valid_actions_mask = []
-        per_agent_rewards = []
-
-        for machine_id, action in enumerate(actions):
-            is_valid = self._is_action_valid(state, machine_id, action)
-            valid_actions_mask.append(is_valid)
-
-            # Compute reward based on action
-            if is_valid and action != self.no_op:
-                reward = -1.0  # Base reward for scheduling
-                if jnp.any(state.ops_mask):
-                    reward += 2.0  # RewardWrapper logic
-            elif action == self.no_op and jnp.any(state.ops_mask):
-                reward = -10.0  # NoOpPenaltyWrapper logic
-            else:
-                reward = 0.0
-            per_agent_rewards.append(reward)
-
-        return jnp.array(valid_actions_mask), jnp.array(per_agent_rewards)
-
-    def _is_action_valid(self, state: State, machine_id: int, action: int) -> bool:
-        """
-        Check if the action is valid for the machine.
         Args:
-            state: Current environment state.
-            machine_id: ID of the machine-agent.
-            action: Selected action (operation index or no-op).
+            state: Batched or single state.
+            actions: Shape: [num_envs, num_machines] or [num_machines].
         Returns:
-            Boolean indicating if the action is valid.
+            valid_actions_mask: Shape: [num_envs, num_machines] or [num_machines].
+            per_agent_rewards: Shape: [num_envs, num_machines] or [num_machines].
         """
-        if action == self.no_op:
-            return True
+        is_batched = actions.ndim == 2
 
-        job_id = action // self.max_num_ops
-        op_id = action % self.max_num_ops
-
-        # Check if operation is available
-        if not state.ops_mask[job_id, op_id]:
-            return False
-
-        # Check if operation is assigned to this machine
-        if state.ops_machine_ids[job_id, op_id] != machine_id:
-            return False
-
-        # Check if predecessor operations are completed
-        if op_id > 0 and jnp.any(state.ops_mask[job_id, :op_id]):
-            return False
-
-        # Check if machine is idle (simplified)
-        return True
-
-    def _get_next_event_time(self, state: State) -> float:
-        """
-        Determine the time of the next event (e.g., operation completion).
-        Returns:
-            Time of the next event (float).
-        """
-        completion_times = state.scheduled_times + state.ops_durations
-        active_ops = completion_times * state.ops_mask
-        return jnp.min(active_ops, initial=jnp.inf, where=state.ops_mask)
-
-    def _advance_time(self, state: State, next_event_time: float) -> State:
-        """
-        Advance the environment time and update state.
-        Args:
-            state: Current state.
-            next_event_time: Time to advance to.
-        Returns:
-            Updated state.
-        """
-        completion_times = state.scheduled_times + state.ops_durations
-        completed = (completion_times <= next_event_time) & state.ops_mask
-        new_ops_mask = state.ops_mask & ~completed
-        new_scheduled_times = jnp.where(
-            state.ops_mask,
-            jnp.maximum(state.scheduled_times, next_event_time),
-            state.scheduled_times
-        )
-
-        return state._replace(
-            ops_mask=new_ops_mask,
-            scheduled_times=new_scheduled_times,
-            step_count=state.step_count + 1
-        )
-
-
-class JobShopWrapper(JumanjiMarlWrapper):
-    def __init__(self, env: JobShop, add_global_state: bool = False):
-        # Apply wrapper stack
-        env = MultiAgentActionWrapper(env)
-        env = ExtendedEpisodeWrapper(env)
-        env = NoOpPenaltyWrapper(env)
-        env = RewardWrapper(env)
-        super().__init__(env, add_global_state)
-        self._env: JobShop
-        if self.time_limit is None:
-            num_jobs = self._env.generator.num_jobs
-            max_num_ops = self._env.generator.max_num_ops
-            max_op_duration = self._env.generator.max_op_duration
-            self.time_limit = num_jobs * max_num_ops * max_op_duration
-
-    def modify_timestep(self, timestep: TimeStep, state) -> TimeStep[Observation]:
-        obs = timestep.observation
-        if not hasattr(obs, "ops_machine_ids"):
-            return timestep
-        raw = obs
-
-        makespan = jnp.max(state.scheduled_times + raw.ops_durations, where=raw.ops_mask, initial=0)
-        num_ops = jnp.sum(raw.ops_mask)
-
-        reward = timestep.reward  # Per-agent rewards from MultiAgentActionWrapper
-        is_terminal = ~jnp.any(raw.ops_mask)
-        step_type = jnp.where(
-            is_terminal,
-            jnp.array(2, dtype=jnp.int32),
-            jnp.array(1, dtype=jnp.int32)
-        )
-        logger.info(f"Modify timestep: Num_ops={num_ops}, Is_terminal={is_terminal}, Ops_mask={raw.ops_mask}")
-        makespan_log = makespan[0] if hasattr(makespan, 'ndim') and makespan.ndim > 0 else makespan
-        num_ops_log = num_ops[0] if hasattr(num_ops, 'ndim') and num_ops.ndim > 0 else num_ops
-
-        extras = {
-            "env_metrics": {
-                "makespan": makespan,
-                "reward": reward,
-                "is_terminal": is_terminal,
-                "num_ops": num_ops_log
-            }
-        }
-
-        num_jobs = self._env.generator.num_jobs
-        max_num_ops = self._env.generator.max_num_ops
-        max_ops_size = num_jobs * max_num_ops
-        agents_view = []
-        for machine_id in range(self.num_agents):
-            machine_ops_mask = (raw.ops_machine_ids == machine_id) & raw.ops_mask
-            op_indices = jnp.where(machine_ops_mask.ravel(), size=max_ops_size, fill_value=-1)[0]
-            machine_ops_ids = jnp.zeros(max_ops_size, dtype=float)
-            machine_ops_durations = jnp.zeros(max_ops_size, dtype=float)
-            machine_ops_mask_array = jnp.zeros(max_ops_size, dtype=float)
-
-            def update_arrays(i, arrays):
-                ids, durations, mask = arrays
-                valid = op_indices[i] >= 0
-                idx = jnp.where(valid, op_indices[i], 0)
-                ids = jnp.where(valid, ids.at[i].set(raw.ops_machine_ids.ravel()[idx]), ids)
-                durations = jnp.where(valid, durations.at[i].set(raw.ops_durations.ravel()[idx]), durations)
-                mask = jnp.where(valid, mask.at[i].set(raw.ops_mask.ravel()[idx]), mask)
-                return ids, durations, mask
-
-            machine_ops_ids, machine_ops_durations, machine_ops_mask_array = jax.lax.fori_loop(
-                0, max_ops_size,
-                update_arrays,
-                (machine_ops_ids, machine_ops_durations, machine_ops_mask_array)
-            )
-            machine_ops_features = jnp.concatenate([
-                machine_ops_ids,
-                machine_ops_durations,
-                machine_ops_mask_array,
-            ])
-            machine_state = jnp.array([
-                raw.machines_job_ids[machine_id].astype(float),
-                raw.machines_remaining_times[machine_id].astype(float),
-            ])
-            global_features = jnp.concatenate([
-                raw.ops_machine_ids.ravel().astype(float),
-                raw.ops_durations.ravel().astype(float),
-                raw.ops_mask.ravel().astype(float),
-                state.scheduled_times.ravel().astype(float),
-            ])
-            agent_view = jnp.concatenate([machine_ops_features, machine_state, global_features])
-            agents_view.append(agent_view)
-        agents_view = jnp.stack(agents_view)
-
-        action_mask = jnp.zeros((self.num_agents, raw.action_mask.shape[-1]), dtype=bool)
-        for machine_id in range(self.num_agents):
-            machine_ops = (raw.ops_machine_ids == machine_id) & raw.ops_mask
-            op_indices = jnp.where(machine_ops.ravel(), size=max_ops_size, fill_value=-1)[0]
-
-            def set_action_mask(i, mask):
-                valid = op_indices[i] >= 0
-                return jnp.where(valid, mask.at[machine_id, op_indices[i]].set(True), mask)
-
-            action_mask = jax.lax.fori_loop(
-                0, max_ops_size,
-                set_action_mask,
-                action_mask
-            )
-            no_op_idx = self._env.num_jobs * self._env.max_num_ops
-            has_ops = jnp.any(machine_ops)
-            action_mask = jnp.where(
-                ~has_ops,
-                action_mask.at[machine_id, no_op_idx].set(True),
-                action_mask
-            )
-
-        step_count = jnp.repeat(state.step_count, self.num_agents)
-
-        obs = Observation(
-            agents_view=agents_view,
-            action_mask=action_mask,
-            step_count=step_count,
-        )
-
-        reward = aggregate_rewards(timestep.reward, self.num_agents)
-        discount = jnp.where(is_terminal, 0.0, 1.0)
-
-        return timestep.replace(
-            observation=obs,
-            reward=reward,
-            discount=discount,
-            step_type=step_type,
-            extras=extras,
-        )
-
-    @cached_property
-    def observation_spec(self) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
-        env_spec = self._env.observation_spec
-        num_jobs, max_ops = env_spec.ops_machine_ids.shape
-        num_machines = self.num_agents
-        max_ops_size = num_jobs * max_ops
-        feature_dim = (
-                max_ops_size * 3
-                + 2
-                + max_ops_size * 4
-        )
-        agents_view_spec = specs.Array(
-            (num_machines, feature_dim),
-            float,
-            "agents_view",
-        )
-        action_mask_spec = specs.BoundedArray(
-            (num_machines, env_spec.action_mask.shape[-1]),
-            bool,
-            False,
-            True,
-            "action_mask",
-        )
-        if self.time_limit is not None:
-            step_count_spec = specs.BoundedArray(
-                (num_machines,),
-                int,
-                jnp.zeros(num_machines, int),
-                jnp.repeat(self.time_limit, num_machines),
-                "step_count",
-            )
-        else:
-            step_count_spec = specs.Array(
-                (num_machines,),
-                int,
-                "step_count",
-            )
-        obs_data = {
-            "agents_view": agents_view_spec,
-            "action_mask": action_mask_spec,
-            "step_count": step_count_spec,
-        }
-        if self.add_global_state:
-            global_dim = num_machines * feature_dim
-            global_state_spec = specs.Array(
-                (num_machines, global_dim),
-                float,
-                "global_state",
-            )
-            obs_data["global_state"] = global_state_spec
-            return specs.Spec(ObservationGlobalState, "ObservationSpec", **obs_data)
-        return specs.Spec(Observation, "ObservationSpec", **obs_data)
+        def validate_single_env(s, a):
+            valid_actions = []
+            rewards = []
+            for machine_id, action in enumerate(a):
+                is_valid = self._is_action_valid(s, machine_id, action)
+                valid_actions.append(is_valid)
+                reward = jnp.where(
+                    is_valid & (action != self.no_op),
+                    -1.0 + 2.0 * jnp.any(s.ops_mask),
+                    jnp.where((action == self.no_op) & jnp.any(s.ops_mask),
