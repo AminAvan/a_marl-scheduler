@@ -156,17 +156,35 @@ class MultiAgentActionWrapper(Wrapper):
         return valid_actions_mask, per_agent_rewards
 
     def _is_action_valid(self, ops_mask: chex.Array, ops_machine_ids: chex.Array, machine_id: int, action: int) -> bool:
+        import jax.numpy as jnp
+
+        # Define no-op action
         is_no_op = action == self.no_op
+
+        # Extract job_id and op_id from action
         job_id = action // self.max_num_ops
         op_id = action % self.max_num_ops
-        # Check validity for non-no-op actions
-        valid_op = (
-                (job_id < self.num_jobs) & (op_id < self.max_num_ops) &
-                ops_mask[job_id, op_id] &
-                (ops_machine_ids[job_id, op_id] == machine_id) &
-                ((op_id == 0) | ~jnp.any(ops_mask[job_id, :op_id]))
-        )
-        # Return True for no-op, otherwise check operation validity
+
+        # Check if job_id and op_id are within bounds
+        job_valid = (job_id >= 0) & (job_id < self.num_jobs)
+        op_valid = (op_id >= 0) & (op_id < self.max_num_ops)
+
+        # Check if the operation is pending (only if indices are valid)
+        op_pending = ops_mask[job_id, op_id] if job_valid and op_valid else False
+
+        # Check if the operation is assigned to the correct machine
+        machine_correct = (ops_machine_ids[job_id, op_id] == machine_id) if job_valid and op_valid else False
+
+        # Check if all preceding operations are completed
+        # Create a mask for operations before op_id
+        ops_before = jnp.arange(self.max_num_ops) < op_id
+        # Check if any preceding operations are still pending
+        preceding_pending = jnp.any(ops_mask[job_id] & ops_before) if job_valid else True
+
+        # Non-no-op action is valid if all conditions are met
+        valid_op = job_valid & op_valid & op_pending & machine_correct & ~preceding_pending
+
+        # No-op is always valid
         return jnp.where(is_no_op, True, valid_op)
 
     def _get_next_event_time(self, state: State) -> chex.Array:
