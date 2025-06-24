@@ -102,25 +102,35 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         return int(self._env.action_spec.num_values[0])
 
 
-class RewardWrapper(JobShop):
+class RewardWrapper(Wrapper):
+    def __init__(self, env: JobShop):
+        super().__init__(env)
+        self.num_jobs = self._env.generator.num_jobs
+        self.max_num_ops = self._env.generator.max_num_ops
+
     def step(self, state, action):
-        next_state, timestep = super().step(state, action)
+        next_state, timestep = self._env.step(state, action)
         reward = timestep.reward
         if action != self.num_jobs * self.max_num_ops and jnp.any(state.ops_mask):
             reward += 2.0
         return next_state, timestep._replace(reward=reward)
 
 
-class NoOpPenaltyWrapper(JobShop):
+class NoOpPenaltyWrapper(Wrapper):
+    def __init__(self, env: JobShop):
+        super().__init__(env)
+        self.num_jobs = self._env.generator.num_jobs
+        self.max_num_ops = self._env.generator.max_num_ops
+
     def step(self, state, action):
         if action == self.num_jobs * self.max_num_ops and jnp.any(state.ops_mask):
             return state, -10.0, False, {}
-        return super().step(state, action)
+        return self._env.step(state, action)
 
 
-class ExtendedEpisodeWrapper(JobShop):
+class ExtendedEpisodeWrapper(Wrapper):
     def step(self, state, action):
-        next_state, timestep = super().step(state, action)
+        next_state, timestep = self._env.step(state, action)
         if jnp.any(state.ops_mask):
             timestep = timestep._replace(done=False)
         return next_state, timestep
@@ -153,10 +163,11 @@ class MultiAgentActionWrapper(Wrapper):
         new_state = state
         for machine_id, action in enumerate(actions):
             if valid_actions_mask[machine_id]:
+                logger.info(f"Machine {machine_id} scheduling action {action}")
                 new_state, single_timestep = self._env.step(new_state, action)
                 logger.info(f"Machine {machine_id} action {action}: New ops_mask={new_state.ops_mask}")
 
-        # Advance time to the next event (placeholder)
+        # Advance time to the next event
         next_event_time = self._get_next_event_time(new_state)
         new_state = self._advance_time(new_state, next_event_time)
 
@@ -225,7 +236,7 @@ class MultiAgentActionWrapper(Wrapper):
         if op_id > 0 and jnp.any(state.ops_mask[job_id, :op_id]):
             return False
 
-        # Check if machine is idle (simplified; adjust based on JobShop state)
+        # Check if machine is idle (simplified)
         return True
 
     def _get_next_event_time(self, state: State) -> float:
@@ -234,7 +245,6 @@ class MultiAgentActionWrapper(Wrapper):
         Returns:
             Time of the next event (float).
         """
-        # Compute completion times for active operations
         completion_times = state.scheduled_times + state.ops_durations
         active_ops = completion_times * state.ops_mask
         return jnp.min(active_ops, initial=jnp.inf, where=state.ops_mask)
@@ -248,12 +258,9 @@ class MultiAgentActionWrapper(Wrapper):
         Returns:
             Updated state.
         """
-        # Update scheduled_times and ops_mask for completed operations
         completion_times = state.scheduled_times + state.ops_durations
         completed = (completion_times <= next_event_time) & state.ops_mask
         new_ops_mask = state.ops_mask & ~completed
-
-        # Update scheduled_times for remaining operations
         new_scheduled_times = jnp.where(
             state.ops_mask,
             jnp.maximum(state.scheduled_times, next_event_time),
