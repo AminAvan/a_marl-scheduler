@@ -242,50 +242,44 @@ class MultiAgentActionWrapper(Wrapper):
         """
         is_batched = actions.ndim == 2
 
-        def validate_single_env(s, a):
+        def validate_single_env(ops_mask, ops_machine_ids, action_mask, a):
             valid_actions = []
             rewards = []
             # Ensure action_mask is properly shaped
-            action_mask = s.action_mask if s.action_mask.ndim >= 2 else s.action_mask[None, ...]
+            action_mask = action_mask if action_mask.ndim >= 2 else action_mask[None, ...]
             for machine_id, action in enumerate(a):
-                is_valid = self._is_action_valid(s, machine_id, action, action_mask[0])
+                is_valid = self._is_action_valid(ops_mask, ops_machine_ids, machine_id, action, action_mask[0])
                 valid_actions.append(is_valid)
                 reward = jnp.where(
                     is_valid & (action != self.no_op),
-                    -1.0 + 2.0 * jnp.any(s.ops_mask),
-                    jnp.where((action == self.no_op) & jnp.any(s.ops_mask), -10.0, 0.0)
+                    -1.0 + 2.0 * jnp.any(ops_mask),
+                    jnp.where((action == self.no_op) & jnp.any(ops_mask), -10.0, 0.0)
                 )
                 rewards.append(reward)
             return jnp.array(valid_actions), jnp.array(rewards)
 
         if is_batched:
-            # Pass only necessary fields to avoid dimension mismatches
-            relevant_state = State(
-                ops_mask=state.ops_mask,
-                ops_machine_ids=state.ops_machine_ids,
-                action_mask=state.action_mask,
-                scheduled_times=state.scheduled_times,
-                ops_durations=state.ops_durations,
-                machines_job_ids=state.machines_job_ids,
-                machines_remaining_times=state.machines_remaining_times,
-                step_count=state.step_count,
-                key=state.key
-            )
-            valid_actions_mask, per_agent_rewards = jax.vmap(validate_single_env, in_axes=(0, 0))(relevant_state,
-                                                                                                  actions)
+            valid_actions_mask, per_agent_rewards = jax.vmap(
+                validate_single_env,
+                in_axes=(0, 0, 0, 0)
+            )(state.ops_mask, state.ops_machine_ids, state.action_mask, actions)
         else:
-            valid_actions_mask, per_agent_rewards = validate_single_env(state[0], actions[0])
+            valid_actions_mask, per_agent_rewards = validate_single_env(
+                state.ops_mask[0], state.ops_machine_ids[0], state.action_mask[0], actions[0]
+            )
 
         return valid_actions_mask, per_agent_rewards
 
-    def _is_action_valid(self, state: State, machine_id: int, action: int, action_mask: chex.Array) -> bool:
+    def _is_action_valid(self, ops_mask: chex.Array, ops_machine_ids: chex.Array, machine_id: int, action: int,
+                         action_mask: chex.Array) -> bool:
         """
         Check if the action is valid for the machine.
         Args:
-            state: Single environment state.
+            ops_mask: Shape: [num_jobs, max_num_ops].
+            ops_machine_ids: Shape: [num_jobs, max_num_ops].
             machine_id: Machine ID.
             action: Action (operation index or no-op).
-            action_mask: Action mask, shape: [num_machines, action_dim] or [action_dim].
+            action_mask: Shape: [num_machines, action_dim].
         Returns:
             Boolean indicating if the action is valid.
         """
@@ -295,13 +289,13 @@ class MultiAgentActionWrapper(Wrapper):
         job_id = action // self.max_num_ops
         op_id = action % self.max_num_ops
 
-        if not state.ops_mask[job_id, op_id]:
+        if not ops_mask[job_id, op_id]:
             return False
 
-        if state.ops_machine_ids[job_id, op_id] != machine_id:
+        if ops_machine_ids[job_id, op_id] != machine_id:
             return False
 
-        if op_id > 0 and jnp.any(state.ops_mask[job_id, :op_id]):
+        if op_id > 0 and jnp.any(ops_mask[job_id, :op_id]):
             return False
 
         # Ensure action_mask is indexed correctly
