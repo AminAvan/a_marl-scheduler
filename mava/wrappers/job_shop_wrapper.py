@@ -13,10 +13,9 @@ from jumanji.wrappers import Wrapper
 from mava.types import Observation, ObservationGlobalState, State
 import logging
 
-# Configure logging for debugging
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
 
 def aggregate_rewards(reward: chex.Array, num_agents: int, num_envs: int = 1) -> chex.Array:
     """
@@ -34,9 +33,8 @@ def aggregate_rewards(reward: chex.Array, num_agents: int, num_envs: int = 1) ->
         return jnp.repeat(reward[:, None], num_agents, axis=-1)
     return reward
 
-
 class JumanjiMarlWrapper(Wrapper, ABC):
-    def __init__(self, env: Environment, add_global_state: bool):
+    def __init__(self, env: Environment, add_global_state: bool = False):
         super().__init__(env)
         self.add_global_state = add_global_state
         self.num_agents = env.generator.num_machines
@@ -100,7 +98,6 @@ class JumanjiMarlWrapper(Wrapper, ABC):
             return specs.Spec(ObservationGlobalState, "ObservationSpec", **obs_data)
         return specs.Spec(Observation, "ObservationSpec", **obs_data)
 
-
 class MultiAgentActionWrapper(Wrapper):
     def __init__(self, env: JobShop):
         super().__init__(env)
@@ -114,20 +111,14 @@ class MultiAgentActionWrapper(Wrapper):
         """
         Process simultaneous actions from all machine-agents.
         Args:
-            state: Current environment state (batched or single).
-            actions: Array of actions, shape: [num_envs, num_machines] or [num_machines].
+            state: Batched environment state (from jax.vmap).
+            actions: Array of actions, shape: [num_envs, num_machines].
         Returns:
             next_state: Updated state.
-            timestep: Updated timestep with observations, rewards, and termination.
+            timestep: Updated timestep.
         """
-        is_batched = actions.ndim == 2
-        num_envs = actions.shape[0] if is_batched else 1
-        actions = jnp.reshape(actions, (num_envs, self.num_agents))
-        # Ensure all state fields are batched
-        state = jax.tree_map(
-            lambda x: jnp.reshape(x, (num_envs, *x.shape[1:]) if x.ndim > 1 else (num_envs, *x.shape)), state
-        )
-        logger.info(f"Step: Actions shape={actions.shape}, Ops_mask shape={state.ops_mask.shape}")
+        num_envs = actions.shape[0]
+        logger.info(f"Step: num_envs={num_envs}, Actions shape={actions.shape}, Ops_mask shape={state.ops_mask.shape}")
 
         valid_actions_mask, per_agent_rewards = self._validate_and_reward_actions(state, actions)
 
@@ -139,20 +130,17 @@ class MultiAgentActionWrapper(Wrapper):
                     new_state, _ = self._env.step(new_state, action)
             return new_state
 
-        new_state = jax.vmap(step_single_env)(state, actions, valid_actions_mask) if is_batched else step_single_env(
-            state[0], actions[0], valid_actions_mask[0])
+        new_state = jax.vmap(step_single_env)(state, actions, valid_actions_mask)
 
         next_event_time = self._get_next_event_time(new_state)
         new_state = self._advance_time(new_state, next_event_time)
 
-        _, timestep = jax.vmap(self._env.step)(new_state,
-                                               jnp.full_like(actions, self.no_op)) if is_batched else self._env.step(
-            new_state[0], self.no_op)
-        has_ops = jnp.any(new_state.ops_mask, axis=(1, 2) if is_batched else (0, 1))
+        _, timestep = jax.vmap(self._env.step)(new_state, jnp.full_like(actions, self.no_op))
+        has_ops = jnp.any(new_state.ops_mask, axis=(1, 2))
         timestep = timestep._replace(reward=per_agent_rewards, done=~has_ops)
 
         logger.info(f"Step completed: Done={timestep.done}, Num_ops={jnp.sum(new_state.ops_mask, axis=(-2, -1))}")
-        return new_state if is_batched else new_state[0], timestep
+        return new_state, timestep
 
     def _validate_and_reward_actions(self, state: State, actions: chex.Array) -> Tuple[chex.Array, chex.Array]:
         """
@@ -164,7 +152,6 @@ class MultiAgentActionWrapper(Wrapper):
             valid_actions_mask: Shape: [num_envs, num_machines].
             per_agent_rewards: Shape: [num_envs, num_machines].
         """
-
         def validate_single_env(ops_mask, ops_machine_ids, a):
             valid_actions = []
             rewards = []
@@ -192,30 +179,17 @@ class MultiAgentActionWrapper(Wrapper):
         job_valid = (job_id >= 0) & (job_id < self.num_jobs)
         op_valid = (op_id >= 0) & (op_id < self.max_num_ops)
         valid_indices = job_valid & op_valid
-        op_pending = jnp.where(
-            valid_indices,
-            ops_mask[job_id, op_id],
-            False
-        )
-        machine_correct = jnp.where(
-            valid_indices,
-            ops_machine_ids[job_id, op_id] == machine_id,
-            False
-        )
+        op_pending = jnp.where(valid_indices, ops_mask[job_id, op_id], False)
+        machine_correct = jnp.where(valid_indices, ops_machine_ids[job_id, op_id] == machine_id, False)
         ops_before = jnp.arange(self.max_num_ops) < op_id
-        preceding_pending = jnp.where(
-            job_valid,
-            jnp.any(ops_mask[job_id] & ops_before),
-            True
-        )
+        preceding_pending = jnp.where(job_valid, jnp.any(ops_mask[job_id] & ops_before), True)
         valid_op = valid_indices & op_pending & machine_correct & ~preceding_pending
         return jnp.where(is_no_op, True, valid_op)
 
     def _get_next_event_time(self, state: State) -> chex.Array:
         completion_times = state.scheduled_times + state.ops_durations
         active_ops = completion_times * state.ops_mask
-        return jnp.min(active_ops, axis=(1, 2) if active_ops.ndim == 3 else (0, 1), where=state.ops_mask,
-                       initial=jnp.inf)
+        return jnp.min(active_ops, axis=(1, 2), where=state.ops_mask, initial=jnp.inf)
 
     def _advance_time(self, state: State, next_event_time: chex.Array) -> State:
         completion_times = state.scheduled_times + state.ops_durations
@@ -226,11 +200,8 @@ class MultiAgentActionWrapper(Wrapper):
             jnp.maximum(state.scheduled_times, next_event_time[..., None, None]),
             state.scheduled_times
         )
-        logger.info(
-            f"Advance time: Num_ops before={jnp.sum(state.ops_mask, axis=(-2, -1))}, after={jnp.sum(new_ops_mask, axis=(-2, -1))}")
-        return state._replace(ops_mask=new_ops_mask, scheduled_times=new_scheduled_times,
-                              step_count=state.step_count + 1)
-
+        logger.info(f"Advance time: Num_ops before={jnp.sum(state.ops_mask, axis=(-2, -1))}, after={jnp.sum(new_ops_mask, axis=(-2, -1))}")
+        return state._replace(ops_mask=new_ops_mask, scheduled_times=new_scheduled_times, step_count=state.step_count + 1)
 
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: JobShop, add_global_state: bool = False):
@@ -248,8 +219,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
         is_batched = state.ops_mask.ndim == 3
         num_envs = state.ops_mask.shape[0] if is_batched else 1
-        makespan = jnp.max(state.scheduled_times + obs.ops_durations, axis=(1, 2) if is_batched else (0, 1),
-                           where=obs.ops_mask, initial=0)
+        makespan = jnp.max(state.scheduled_times + obs.ops_durations, axis=(1, 2) if is_batched else (0, 1), where=obs.ops_mask, initial=0)
         num_ops = jnp.sum(obs.ops_mask, axis=(1, 2) if is_batched else (0, 1))
         reward = aggregate_rewards(timestep.reward, self.num_agents, num_envs)
         is_terminal = ~jnp.any(obs.ops_mask, axis=(1, 2) if is_batched else (0, 1))
@@ -261,26 +231,20 @@ class JobShopWrapper(JumanjiMarlWrapper):
         agents_view = []
         for machine_id in range(self.num_agents):
             machine_ops_mask = (obs.ops_machine_ids == machine_id) & obs.ops_mask
-            op_indices = jnp.where(machine_ops_mask.reshape(num_envs, -1) if is_batched else machine_ops_mask.ravel(),
-                                   size=max_ops_size, fill_value=-1)[1 if is_batched else 0]
-            machine_ops_features = jnp.zeros((num_envs, max_ops_size * 3) if is_batched else (max_ops_size * 3,),
-                                             dtype=float)
+            op_indices = jnp.where(machine_ops_mask.reshape(num_envs, -1) if is_batched else machine_ops_mask.ravel(), size=max_ops_size, fill_value=-1)[1 if is_batched else 0]
+            machine_ops_features = jnp.zeros((num_envs, max_ops_size * 3) if is_batched else (max_ops_size * 3,), dtype=float)
             agent_view = machine_ops_features
             agents_view.append(agent_view)
         agents_view = jnp.stack(agents_view, axis=-2)
 
-        action_mask = jnp.zeros(
-            (num_envs, self.num_agents, self.action_dim) if is_batched else (self.num_agents, self.action_dim),
-            dtype=bool)
+        action_mask = jnp.zeros((num_envs, self.num_agents, self.action_dim) if is_batched else (self.num_agents, self.action_dim), dtype=bool)
         for machine_id in range(self.num_agents):
             machine_ops = (obs.ops_machine_ids == machine_id) & obs.ops_mask
-            op_indices = \
-            jnp.where(machine_ops.reshape(num_envs, -1) if is_batched else machine_ops.ravel(), size=max_ops_size,
-                      fill_value=-1)[1 if is_batched else 0]
-            action_mask = action_mask.at[..., machine_id, op_indices].set(True, indices_are_sorted=False, mode="drop")
+            op_indices = jnp.where(machine_ops.reshape(num_envs, -1) if is_batched else machine_ops.ravel(), size=max_ops_size, fill_value=-1)[1 if is_batched else 0]
+            action_mask = action_mask.at[..., machine_id, op_indices].set(True, indices_are_sorted=False, mode="largest")
         action_mask = action_mask.at[..., self.no_op].set(~jnp.any(obs.ops_mask, axis=(-2, -1)))
 
-        step_count = jnp.repeat(state.step_count[..., None], self.num_agents, axis=-1)
+        step_count = jnp.repeat(timestep.observation.step_count[..., None], self.num_agents, axis=-1)
 
         observation = Observation(agents_view=agents_view, action_mask=action_mask, step_count=step_count)
         return timestep.replace(observation=observation, reward=reward, extras=extras)
