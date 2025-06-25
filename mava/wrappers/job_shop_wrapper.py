@@ -156,8 +156,6 @@ class MultiAgentActionWrapper(Wrapper):
         return valid_actions_mask, per_agent_rewards
 
     def _is_action_valid(self, ops_mask: chex.Array, ops_machine_ids: chex.Array, machine_id: int, action: int) -> bool:
-        import jax.numpy as jnp
-
         # Define no-op action
         is_no_op = action == self.no_op
 
@@ -169,20 +167,33 @@ class MultiAgentActionWrapper(Wrapper):
         job_valid = (job_id >= 0) & (job_id < self.num_jobs)
         op_valid = (op_id >= 0) & (op_id < self.max_num_ops)
 
-        # Check if the operation is pending (only if indices are valid)
-        op_pending = ops_mask[job_id, op_id] if job_valid and op_valid else False
+        # Combine validity conditions
+        valid_indices = job_valid & op_valid
+
+        # Conditionally access ops_mask[job_id, op_id] using jnp.where
+        op_pending = jnp.where(
+            valid_indices,
+            ops_mask[job_id, op_id],
+            False
+        )
 
         # Check if the operation is assigned to the correct machine
-        machine_correct = (ops_machine_ids[job_id, op_id] == machine_id) if job_valid and op_valid else False
+        machine_correct = jnp.where(
+            valid_indices,
+            ops_machine_ids[job_id, op_id] == machine_id,
+            False
+        )
 
         # Check if all preceding operations are completed
-        # Create a mask for operations before op_id
         ops_before = jnp.arange(self.max_num_ops) < op_id
-        # Check if any preceding operations are still pending
-        preceding_pending = jnp.any(ops_mask[job_id] & ops_before) if job_valid else True
+        preceding_pending = jnp.where(
+            job_valid,
+            jnp.any(ops_mask[job_id] & ops_before),
+            True  # Default to invalid if job_id is out of bounds
+        )
 
         # Non-no-op action is valid if all conditions are met
-        valid_op = job_valid & op_valid & op_pending & machine_correct & ~preceding_pending
+        valid_op = valid_indices & op_pending & machine_correct & ~preceding_pending
 
         # No-op is always valid
         return jnp.where(is_no_op, True, valid_op)
