@@ -29,7 +29,14 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         super().__init__(env)
         self.add_global_state = add_global_state
         self.num_agents = env.generator.num_machines
+        # Set a default time_limit if not provided by the environment
         self.time_limit = getattr(env, "time_limit", None)
+        if self.time_limit is None:
+            # Estimate time_limit based on env parameters
+            num_jobs = getattr(env, "num_jobs", 5)  # Default from config
+            max_num_ops = getattr(env, "max_num_ops", 4)
+            max_op_duration = getattr(env, "max_op_duration", 4)
+            self.time_limit = num_jobs * max_num_ops * max_op_duration  # e.g., 5 * 4 * 4 = 80
 
     @abstractmethod
     def modify_timestep(self, timestep: TimeStep, state: Any) -> TimeStep:
@@ -54,6 +61,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         return state, timestep
 
     def step(self, state: Any, action: chex.Array) -> Tuple[Any, TimeStep]:
+        logger.info(f"Step: Actions={action}, Num_ops={jnp.sum(state.ops_mask, axis=(-2, -1))}")
         state, timestep = self._env.step(state, action)
         timestep = self.modify_timestep(timestep, state)
         if self.add_global_state:
@@ -70,7 +78,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     @cached_property
     def observation_spec(self) -> Dict[str, specs.Array]:
         feature_dim = self._env.observation_spec().agents_view.shape[-1]
-        return {
+        obs_spec = {
             "agents_view": specs.Array(
                 shape=(self.num_agents, feature_dim),
                 dtype=jnp.float32,
@@ -90,12 +98,14 @@ class JumanjiMarlWrapper(Wrapper, ABC):
                 maximum=self.time_limit,
                 name="step_count"
             ),
-            "global_state": specs.Array(
+        }
+        if self.add_global_state:
+            obs_spec["global_state"] = specs.Array(
                 shape=(self.num_agents, self.num_agents * feature_dim),
                 dtype=jnp.float32,
                 name="global_state"
-            ) if self.add_global_state else None
-        }
+            )
+        return obs_spec
 
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: JobShop, add_global_state: bool = False):
@@ -174,7 +184,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
     @cached_property
     def observation_spec(self):
         feature_dim = self.num_jobs * self.max_num_ops * 3
-        return {
+        obs_spec = {
             "agents_view": specs.Array(
                 shape=(self.num_agents, feature_dim),
                 dtype=jnp.float32,
@@ -194,12 +204,14 @@ class JobShopWrapper(JumanjiMarlWrapper):
                 maximum=self.time_limit,
                 name="step_count"
             ),
-            "global_state": specs.Array(
+        }
+        if self.add_global_state:
+            obs_spec["global_state"] = specs.Array(
                 shape=(self.num_agents, self.num_agents * feature_dim),
                 dtype=jnp.float32,
                 name="global_state"
-            ) if self.add_global_state else None
-        }
+            )
+        return obs_spec
 
     @cached_property
     def action_spec(self):
