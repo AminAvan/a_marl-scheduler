@@ -212,7 +212,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
         self.action_dim = self.num_jobs * self.max_num_ops + 1
         self.time_limit = self.num_jobs * self.max_num_ops * env.generator.max_op_duration
 
-    def modify_timestep(self, timestep: TimeStep, state: State) -> TimeStep:
+    def modify_timestep(self, timestep, state):
         """
         Modify the timestep to be compatible with Mava's multi-agent framework.
         This includes creating per-agent observations, action masks, and step counts.
@@ -228,8 +228,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
         is_batched = state.ops_mask.ndim == 3
         num_envs = state.ops_mask.shape[0] if is_batched else 1
 
-        # Extract raw observation from the state (not timestep.observation)
-        # In Jumanji JobShop, the state contains the full observation data
+        # Extract raw observation from the state
         ops_durations = state.ops_durations
         ops_mask = state.ops_mask
         ops_machine_ids = state.ops_machine_ids
@@ -263,12 +262,20 @@ class JobShopWrapper(JumanjiMarlWrapper):
         for machine_id in range(self.num_agents):
             # Identify operations for this machine
             machine_ops = (ops_machine_ids == machine_id) & ops_mask
-            # Get valid operation indices
-            op_indices = jnp.where(
-                machine_ops.reshape(num_envs, -1) if is_batched else machine_ops.reshape(-1),
-                size=max_ops_size,
-                fill_value=-1
-            )[1]  # Shape (num_envs, max_ops_size) or (max_ops_size,)
+            if is_batched:
+                # Reshape to (num_envs, num_jobs * max_num_ops)
+                condition = machine_ops.reshape(num_envs, -1)
+                # Get indices where condition is True
+                where_result = jnp.where(condition, size=max_ops_size, fill_value=-1)
+                # Safely extract column indices (operation indices)
+                op_indices = where_result[1]  # Shape (num_envs, max_ops_size)
+            else:
+                # Reshape to (num_jobs * max_num_ops,)
+                condition = machine_ops.reshape(-1)
+                # Get indices where condition is True
+                where_result = jnp.where(condition, size=max_ops_size, fill_value=-1)
+                # Indices are in a 1-tuple, extract and add batch dimension
+                op_indices = where_result[0][None, :]  # Shape (1, max_ops_size)
 
             # Set valid actions in action_mask
             if is_batched:
@@ -280,13 +287,11 @@ class JobShopWrapper(JumanjiMarlWrapper):
         action_mask = action_mask.at[:, :, -1].set(True)
 
         # Create per-agent observations
-        # Combine relevant features into a flat array per agent
-        # For each agent, provide a view of ops_durations and ops_mask filtered by machine
         if is_batched:
             feature_dim = self.num_jobs * self.max_num_ops * 2  # ops_durations + ops_mask
             agents_view = jnp.zeros((num_envs, self.num_agents, feature_dim), dtype=float)
             for machine_id in range(self.num_agents):
-                machine_mask = (ops_machine_ids == machine_id)  # Shape [num_envs, num_jobs, max_num_ops]
+                machine_mask = (ops_machine_ids == machine_id)
                 durations = jnp.where(machine_mask, ops_durations, 0.0)
                 mask = machine_mask.astype(float)
                 agent_features = jnp.concatenate(
@@ -321,9 +326,6 @@ class JobShopWrapper(JumanjiMarlWrapper):
             action_mask=action_mask,
             step_count=step_count,
         )
-
-        # Replace timestep observation and reward
-        return timestep.replace(observation=observation, reward=reward, extras=extras)
 
         # Replace timestep observation and reward
         return timestep.replace(observation=observation, reward=reward, extras=extras)
