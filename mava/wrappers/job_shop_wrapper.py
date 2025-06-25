@@ -123,8 +123,11 @@ class MultiAgentActionWrapper(Wrapper):
         is_batched = actions.ndim == 2
         num_envs = actions.shape[0] if is_batched else 1
         actions = actions if is_batched else actions[None, :]
-        if is_batched:
-            state = jax.tree_map(lambda x: x if x.ndim == 3 else x[None, ...], state)
+        # Ensure all state fields are batched
+        state = jax.tree_map(
+            lambda x: x if x.ndim >= 2 else jnp.expand_dims(x, axis=0), state
+        )
+        logger.info(f"Step: Actions shape={actions.shape}, Ops_mask shape={state.ops_mask.shape}")
 
         valid_actions_mask, per_agent_rewards = self._validate_and_reward_actions(state, actions)
 
@@ -148,18 +151,18 @@ class MultiAgentActionWrapper(Wrapper):
         has_ops = jnp.any(new_state.ops_mask, axis=(1, 2) if is_batched else (0, 1))
         timestep = timestep._replace(reward=per_agent_rewards, done=~has_ops)
 
-        logger.info(f"Step completed: Done={timestep.done}")
+        logger.info(f"Step completed: Done={timestep.done}, Num_ops={jnp.sum(new_state.ops_mask, axis=(-2, -1))}")
         return new_state if is_batched else new_state, timestep
 
     def _validate_and_reward_actions(self, state: State, actions: chex.Array) -> Tuple[chex.Array, chex.Array]:
         """
         Validate actions and compute per-agent rewards.
         Args:
-            state: Batched or single state.
-            actions: Shape: [num_envs, num_machines] or [num_machines].
+            state: Batched state with fields [num_envs, ...].
+            actions: Shape: [num_envs, num_machines].
         Returns:
-            valid_actions_mask: Shape: [num_envs, num_machines] or [num_machines].
-            per_agent_rewards: Shape: [num_envs, num_machines] or [num_machines].
+            valid_actions_mask: Shape: [num_envs, num_machines].
+            per_agent_rewards: Shape: [num_envs, num_machines].
         """
         is_batched = actions.ndim == 2
 
@@ -184,7 +187,7 @@ class MultiAgentActionWrapper(Wrapper):
             )(state.ops_mask, state.ops_machine_ids, actions)
         else:
             valid_actions_mask, per_agent_rewards = validate_single_env(
-                state.ops_mask, state.ops_machine_ids, actions[0]
+                state.ops_mask[0], state.ops_machine_ids[0], actions[0]
             )
         return valid_actions_mask, per_agent_rewards
 
@@ -229,6 +232,8 @@ class MultiAgentActionWrapper(Wrapper):
             jnp.maximum(state.scheduled_times, next_event_time[..., None, None]),
             state.scheduled_times
         )
+        logger.info(
+            f"Advance time: Num_ops before={jnp.sum(state.ops_mask, axis=(-2, -1))}, after={jnp.sum(new_ops_mask, axis=(-2, -1))}")
         return state._replace(ops_mask=new_ops_mask, scheduled_times=new_scheduled_times,
                               step_count=state.step_count + 1)
 
