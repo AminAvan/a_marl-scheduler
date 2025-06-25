@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any, Tuple, Union, Dict
+from typing import Any, Tuple, Union, Dict, NamedTuple
 import jax
 import jax.numpy as jnp
 from jumanji.env import Environment
@@ -23,6 +23,16 @@ def aggregate_rewards(reward: chex.Array, num_agents: int, num_envs: int = 1) ->
     if reward.ndim == 1:  # Batched reward [num_envs]
         return jnp.repeat(reward[:, None], num_agents, axis=-1)
     return reward  # Already [num_envs, num_agents]
+
+class ObservationSpec(NamedTuple):
+    """Custom observation spec for Mava compatibility."""
+    specs: Dict[str, specs.Array]
+
+    def generate_value(self):
+        """Generate a sample observation based on the specs."""
+        return Observation(
+            **{key: spec.generate_value() for key, spec in self.specs.items() if spec is not None}
+        )
 
 class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool = False):
@@ -74,9 +84,9 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         return state, timestep
 
     @cached_property
-    def observation_spec(self) -> Dict[str, specs.Array]:
+    def observation_spec(self) -> ObservationSpec:
         feature_dim = self._env.observation_spec().agents_view.shape[-1]
-        obs_spec = {
+        obs_specs = {
             "agents_view": specs.Array(
                 shape=(self.num_agents, feature_dim),
                 dtype=jnp.float32,
@@ -98,12 +108,12 @@ class JumanjiMarlWrapper(Wrapper, ABC):
             ),
         }
         if self.add_global_state:
-            obs_spec["global_state"] = specs.Array(
+            obs_specs["global_state"] = specs.Array(
                 shape=(self.num_agents, self.num_agents * feature_dim),
                 dtype=jnp.float32,
                 name="global_state"
             )
-        return obs_spec
+        return ObservationSpec(specs=obs_specs)
 
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: JobShop, add_global_state: bool = False):
@@ -115,7 +125,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
     def modify_timestep(self, timestep: TimeStep, state: Any) -> TimeStep:
         is_batched = state.ops_mask.ndim == 3
         num_envs = state.ops_mask.shape[0] if is_batched else 1
-        # Use state for observation fields to avoid attribute errors
+        # Use state for observation fields
         obs_durations = state.ops_durations
         obs_mask = state.ops_mask
         obs_machine_ids = state.ops_machine_ids
@@ -183,9 +193,9 @@ class JobShopWrapper(JumanjiMarlWrapper):
         return timestep.replace(observation=observation, reward=reward, extras=extras)
 
     @cached_property
-    def observation_spec(self) -> Dict[str, specs.Array]:
+    def observation_spec(self) -> ObservationSpec:
         feature_dim = self.num_jobs * self.max_num_ops * 3
-        obs_spec = {
+        obs_specs = {
             "agents_view": specs.Array(
                 shape=(self.num_agents, feature_dim),
                 dtype=jnp.float32,
@@ -207,12 +217,12 @@ class JobShopWrapper(JumanjiMarlWrapper):
             ),
         }
         if self.add_global_state:
-            obs_spec["global_state"] = specs.Array(
+            obs_specs["global_state"] = specs.Array(
                 shape=(self.num_agents, self.num_agents * feature_dim),
                 dtype=jnp.float32,
                 name="global_state"
             )
-        return obs_spec
+        return ObservationSpec(specs=obs_specs)
 
     @cached_property
     def action_spec(self) -> specs.DiscreteArray:
