@@ -4,8 +4,7 @@ from typing import Any, Tuple, Union, Dict, NamedTuple
 import jax
 import jax.numpy as jnp
 from jumanji.env import Environment
-from jumanji.environments.packing.job_shop import JobShop
-from jumanji.types import TimeStep
+from jumanji.environments.packing.job_shop import JobShop, State, TimeStep
 from jumanji.wrappers import Wrapper
 import chex
 import logging
@@ -33,6 +32,26 @@ class ObservationSpec(NamedTuple):
         return Observation(
             **{key: spec.generate_value() for key, spec in self.specs.items() if spec is not None}
         )
+
+class JobShopPatched(JobShop):
+    def __init__(self, num_jobs: int, num_machines: int, max_num_ops: int, max_op_duration: int):
+        super().__init__(num_jobs=num_jobs, num_machines=num_machines, max_num_ops=max_num_ops, max_op_duration=max_op_duration)
+
+    def step(self, state: State, action: jnp.ndarray) -> Tuple[State, TimeStep]:
+        """Step the environment with JAX-compatible action validation."""
+        indices = action[:, None]  # Shape: [num_machines, 1]
+        selected_mask = jnp.take_along_axis(state.action_mask, indices, axis=1).squeeze(axis=1)  # Shape: [num_machines]
+        invalid = ~jnp.all(selected_mask)
+
+        if invalid:
+            return state, TimeStep(
+                step_type=state.step_type,
+                reward=jnp.array(-1.0, dtype=jnp.float32),  # Penalty for invalid action
+                discount=state.discount,
+                observation=self._state_to_observation(state),
+                extras=state.extras,
+            )
+        return super().step(state, action)
 
 class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool = False):
@@ -116,16 +135,21 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         return ObservationSpec(specs=obs_specs)
 
 class JobShopWrapper(JumanjiMarlWrapper):
-    def __init__(self, env: JobShop, add_global_state: bool = False):
+    def __init__(self, num_jobs: int = 5, num_machines: int = 4, max_num_ops: int = 4, max_op_duration: int = 4, add_global_state: bool = False):
+        env = JobShopPatched(
+            num_jobs=num_jobs,
+            num_machines=num_machines,
+            max_num_ops=max_num_ops,
+            max_op_duration=max_op_duration
+        )
         super().__init__(env, add_global_state)
-        self.num_jobs = env.num_jobs
-        self.max_num_ops = env.max_num_ops
+        self.num_jobs = num_jobs
+        self.max_num_ops = max_num_ops
         self.action_dim = self.num_jobs * self.max_num_ops + 1
 
     def modify_timestep(self, timestep: TimeStep, state: Any) -> TimeStep:
         is_batched = state.ops_mask.ndim == 3
         num_envs = state.ops_mask.shape[0] if is_batched else 1
-        # Use state for observation fields
         obs_durations = state.ops_durations
         obs_mask = state.ops_mask
         obs_machine_ids = state.ops_machine_ids
