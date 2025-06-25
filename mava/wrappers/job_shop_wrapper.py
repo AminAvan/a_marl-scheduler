@@ -122,10 +122,10 @@ class MultiAgentActionWrapper(Wrapper):
         """
         is_batched = actions.ndim == 2
         num_envs = actions.shape[0] if is_batched else 1
-        actions = actions if is_batched else actions[None, :]
+        actions = jnp.reshape(actions, (num_envs, self.num_agents))
         # Ensure all state fields are batched
         state = jax.tree_map(
-            lambda x: x if x.ndim >= 2 else jnp.expand_dims(x, axis=0), state
+            lambda x: jnp.reshape(x, (num_envs, *x.shape[1:]) if x.ndim > 1 else (num_envs, *x.shape)), state
         )
         logger.info(f"Step: Actions shape={actions.shape}, Ops_mask shape={state.ops_mask.shape}")
 
@@ -140,19 +140,19 @@ class MultiAgentActionWrapper(Wrapper):
             return new_state
 
         new_state = jax.vmap(step_single_env)(state, actions, valid_actions_mask) if is_batched else step_single_env(
-            state, actions[0], valid_actions_mask[0])
+            state[0], actions[0], valid_actions_mask[0])
 
         next_event_time = self._get_next_event_time(new_state)
         new_state = self._advance_time(new_state, next_event_time)
 
         _, timestep = jax.vmap(self._env.step)(new_state,
                                                jnp.full_like(actions, self.no_op)) if is_batched else self._env.step(
-            new_state, self.no_op)
+            new_state[0], self.no_op)
         has_ops = jnp.any(new_state.ops_mask, axis=(1, 2) if is_batched else (0, 1))
         timestep = timestep._replace(reward=per_agent_rewards, done=~has_ops)
 
         logger.info(f"Step completed: Done={timestep.done}, Num_ops={jnp.sum(new_state.ops_mask, axis=(-2, -1))}")
-        return new_state if is_batched else new_state, timestep
+        return new_state if is_batched else new_state[0], timestep
 
     def _validate_and_reward_actions(self, state: State, actions: chex.Array) -> Tuple[chex.Array, chex.Array]:
         """
@@ -164,7 +164,6 @@ class MultiAgentActionWrapper(Wrapper):
             valid_actions_mask: Shape: [num_envs, num_machines].
             per_agent_rewards: Shape: [num_envs, num_machines].
         """
-        is_batched = actions.ndim == 2
 
         def validate_single_env(ops_mask, ops_machine_ids, a):
             valid_actions = []
@@ -180,15 +179,10 @@ class MultiAgentActionWrapper(Wrapper):
                 rewards.append(reward)
             return jnp.array(valid_actions), jnp.array(rewards)
 
-        if is_batched:
-            valid_actions_mask, per_agent_rewards = jax.vmap(
-                validate_single_env,
-                in_axes=(0, 0, 0)
-            )(state.ops_mask, state.ops_machine_ids, actions)
-        else:
-            valid_actions_mask, per_agent_rewards = validate_single_env(
-                state.ops_mask[0], state.ops_machine_ids[0], actions[0]
-            )
+        valid_actions_mask, per_agent_rewards = jax.vmap(
+            validate_single_env,
+            in_axes=(0, 0, 0)
+        )(state.ops_mask, state.ops_machine_ids, actions)
         return valid_actions_mask, per_agent_rewards
 
     def _is_action_valid(self, ops_mask: chex.Array, ops_machine_ids: chex.Array, machine_id: int, action: int) -> bool:
