@@ -4,7 +4,8 @@ from typing import Any, Tuple, Union, Dict, NamedTuple
 import jax
 import jax.numpy as jnp
 from jumanji.env import Environment
-from jumanji.environments.packing.job_shop import JobShop, State, TimeStep
+from jumanji.environments.packing.job_shop import JobShop, State
+from jumanji.types import TimeStep
 from jumanji.wrappers import Wrapper
 import chex
 import logging
@@ -46,7 +47,7 @@ class JobShopPatched(JobShop):
         if invalid:
             return state, TimeStep(
                 step_type=state.step_type,
-                reward=jnp.array(-1.0, dtype=jnp.float32),  # Penalty for invalid action
+                reward=jnp.array(-1.0, dtype=jnp.float32),
                 discount=state.discount,
                 observation=self._state_to_observation(state),
                 extras=state.extras,
