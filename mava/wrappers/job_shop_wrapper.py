@@ -212,7 +212,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
         self.action_dim = self.num_jobs * self.max_num_ops + 1
         self.time_limit = self.num_jobs * self.max_num_ops * env.generator.max_op_duration
 
-    def modify_timestep(self, timestep, state):
+    def modify_timestep(self, timestep: TimeStep, state: State) -> TimeStep:
         """
         Modify the timestep to be compatible with Mava's multi-agent framework.
         This includes creating per-agent observations, action masks, and step counts.
@@ -228,22 +228,28 @@ class JobShopWrapper(JumanjiMarlWrapper):
         is_batched = state.ops_mask.ndim == 3
         num_envs = state.ops_mask.shape[0] if is_batched else 1
 
+        # Extract raw observation from the state (not timestep.observation)
+        # In Jumanji JobShop, the state contains the full observation data
+        ops_durations = state.ops_durations
+        ops_mask = state.ops_mask
+        ops_machine_ids = state.ops_machine_ids
+
         # Calculate makespan and number of operations
         makespan = jnp.max(
-            state.scheduled_times + timestep.observation.ops_durations,
+            state.scheduled_times + ops_durations,
             axis=(1, 2) if is_batched else (0, 1),
-            where=timestep.observation.ops_mask,
+            where=ops_mask,
             initial=0
         )
-        num_ops = jnp.sum(timestep.observation.ops_mask, axis=(1, 2) if is_batched else (0, 1))
+        num_ops = jnp.sum(ops_mask, axis=(1, 2) if is_batched else (0, 1))
 
-        # Aggregate rewards for each agent (assuming this function exists in your code)
+        # Aggregate rewards for each agent
         reward = aggregate_rewards(timestep.reward, self.num_agents, num_envs)
 
         # Check if the episode is terminal
-        is_terminal = ~jnp.any(timestep.observation.ops_mask, axis=(1, 2) if is_batched else (0, 1))
+        is_terminal = ~jnp.any(ops_mask, axis=(1, 2) if is_batched else (0, 1))
 
-        # Log for debugging (assuming logger is defined)
+        # Log for debugging
         logger.info(f"Num_ops={num_ops}, Is_terminal={is_terminal}")
 
         # Extras for logging or metrics
@@ -252,39 +258,72 @@ class JobShopWrapper(JumanjiMarlWrapper):
         # Create action mask for each agent
         action_mask = jnp.zeros((num_envs, self.num_agents, self.action_dim), dtype=bool)
         max_ops_size = self.num_jobs * self.max_num_ops
-        obs = timestep.observation
-
-        # Create indices for batched environments
         env_indices = jnp.arange(num_envs)[:, None]  # Shape (num_envs, 1)
 
         for machine_id in range(self.num_agents):
             # Identify operations for this machine
-            machine_ops = (obs.ops_machine_ids == machine_id) & obs.ops_mask
+            machine_ops = (ops_machine_ids == machine_id) & ops_mask
             # Get valid operation indices
             op_indices = jnp.where(
-                machine_ops.reshape(num_envs, -1),
+                machine_ops.reshape(num_envs, -1) if is_batched else machine_ops.reshape(-1),
                 size=max_ops_size,
                 fill_value=-1
-            )[1]  # Shape (num_envs, max_ops_size)
+            )[1]  # Shape (num_envs, max_ops_size) or (max_ops_size,)
 
             # Set valid actions in action_mask
-            action_mask = action_mask.at[env_indices, machine_id, op_indices].set(True)
+            if is_batched:
+                action_mask = action_mask.at[env_indices, machine_id, op_indices].set(True)
+            else:
+                action_mask = action_mask.at[0, machine_id, op_indices].set(True)
 
         # Set no-op action (last index) as always valid
         action_mask = action_mask.at[:, :, -1].set(True)
 
-        # Create per-agent observations (simplified; expand as needed)
-        agents_view = jnp.repeat(obs.agents_view[None, ...], self.num_agents, axis=0)
+        # Create per-agent observations
+        # Combine relevant features into a flat array per agent
+        # For each agent, provide a view of ops_durations and ops_mask filtered by machine
+        if is_batched:
+            feature_dim = self.num_jobs * self.max_num_ops * 2  # ops_durations + ops_mask
+            agents_view = jnp.zeros((num_envs, self.num_agents, feature_dim), dtype=float)
+            for machine_id in range(self.num_agents):
+                machine_mask = (ops_machine_ids == machine_id)  # Shape [num_envs, num_jobs, max_num_ops]
+                durations = jnp.where(machine_mask, ops_durations, 0.0)
+                mask = machine_mask.astype(float)
+                agent_features = jnp.concatenate(
+                    [durations.reshape(num_envs, -1), mask.reshape(num_envs, -1)],
+                    axis=-1
+                )
+                agents_view = agents_view.at[:, machine_id, :].set(agent_features)
+        else:
+            feature_dim = self.num_jobs * self.max_num_ops * 2
+            agents_view = jnp.zeros((self.num_agents, feature_dim), dtype=float)
+            for machine_id in range(self.num_agents):
+                machine_mask = (ops_machine_ids == machine_id)
+                durations = jnp.where(machine_mask, ops_durations, 0.0)
+                mask = machine_mask.astype(float)
+                agent_features = jnp.concatenate(
+                    [durations.reshape(-1), mask.reshape(-1)],
+                    axis=-1
+                )
+                agents_view = agents_view.at[machine_id, :].set(agent_features)
+            agents_view = agents_view[None, ...]  # Add batch dimension
 
         # Step count for each agent
-        step_count = jnp.repeat(timestep.observation.step_count[..., None], self.num_agents, axis=-1)
+        step_count = jnp.repeat(
+            state.step_count[..., None] if is_batched else state.step_count[None, None],
+            self.num_agents,
+            axis=-1
+        )
 
-        # Create Observation object (assuming Observation class is defined)
+        # Create Observation object
         observation = Observation(
             agents_view=agents_view,
             action_mask=action_mask,
             step_count=step_count,
         )
+
+        # Replace timestep observation and reward
+        return timestep.replace(observation=observation, reward=reward, extras=extras)
 
         # Replace timestep observation and reward
         return timestep.replace(observation=observation, reward=reward, extras=extras)
