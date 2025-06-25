@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any, Tuple, Union  # Added Any import
+from typing import Any, Tuple, Union, Dict
 import jax
 import jax.numpy as jnp
 from jumanji.env import Environment
@@ -68,26 +68,34 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         return state, timestep
 
     @cached_property
-    def observation_spec(self) -> specs.Spec[Union[Observation, ObservationGlobalState]]:
-        step_count = specs.BoundedArray(
-            (self.num_agents,), int, 0, self.time_limit, "step_count"
-        )
-        obs_spec = self._env.observation_spec
-        obs_data = {
-            "agents_view": obs_spec.agents_view,
-            "action_mask": obs_spec.action_mask,
-            "step_count": step_count,
+    def observation_spec(self) -> Dict[str, specs.Array]:
+        feature_dim = self._env.observation_spec().agents_view.shape[-1]
+        return {
+            "agents_view": specs.Array(
+                shape=(self.num_agents, feature_dim),
+                dtype=jnp.float32,
+                name="agents_view"
+            ),
+            "action_mask": specs.BoundedArray(
+                shape=(self.num_agents, self._env.action_spec().num_values),
+                dtype=bool,
+                minimum=False,
+                maximum=True,
+                name="action_mask"
+            ),
+            "step_count": specs.BoundedArray(
+                shape=(self.num_agents,),
+                dtype=jnp.int32,
+                minimum=0,
+                maximum=self.time_limit,
+                name="step_count"
+            ),
+            "global_state": specs.Array(
+                shape=(self.num_agents, self.num_agents * feature_dim),
+                dtype=jnp.float32,
+                name="global_state"
+            ) if self.add_global_state else None
         }
-        if self.add_global_state:
-            num_obs_features = obs_spec.agents_view.shape[-1]
-            global_state = specs.Array(
-                (self.num_agents, self.num_agents * num_obs_features),
-                obs_spec.agents_view.dtype,
-                "global_state",
-            )
-            obs_data["global_state"] = global_state
-            return specs.Spec(ObservationGlobalState, "ObservationSpec", **obs_data)
-        return specs.Spec(Observation, "ObservationSpec", **obs_data)
 
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: JobShop, add_global_state: bool = False):
@@ -165,19 +173,34 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
     @cached_property
     def observation_spec(self):
-        from dm_env import specs
         feature_dim = self.num_jobs * self.max_num_ops * 3
-        agents_view_spec = specs.Array((self.num_agents, feature_dim), float, "agents_view")
-        action_mask_spec = specs.BoundedArray((self.num_agents, self.action_dim), bool, False, True, "action_mask")
-        step_count_spec = specs.BoundedArray((self.num_agents,), int, 0, self.time_limit, "step_count")
-        obs_data = {"agents_view": agents_view_spec, "action_mask": action_mask_spec, "step_count": step_count_spec}
-        if self.add_global_state:
-            global_state_spec = specs.Array((self.num_agents, self.num_agents * feature_dim), float, "global_state")
-            obs_data["global_state"] = global_state_spec
-            return specs.Spec(ObservationGlobalState, "ObservationSpec", **obs_data)
-        return specs.Spec(Observation, "ObservationSpec", **obs_data)
+        return {
+            "agents_view": specs.Array(
+                shape=(self.num_agents, feature_dim),
+                dtype=jnp.float32,
+                name="agents_view"
+            ),
+            "action_mask": specs.BoundedArray(
+                shape=(self.num_agents, self.action_dim),
+                dtype=bool,
+                minimum=False,
+                maximum=True,
+                name="action_mask"
+            ),
+            "step_count": specs.BoundedArray(
+                shape=(self.num_agents,),
+                dtype=jnp.int32,
+                minimum=0,
+                maximum=self.time_limit,
+                name="step_count"
+            ),
+            "global_state": specs.Array(
+                shape=(self.num_agents, self.num_agents * feature_dim),
+                dtype=jnp.float32,
+                name="global_state"
+            ) if self.add_global_state else None
+        }
 
     @cached_property
     def action_spec(self):
-        from dm_env import specs
         return specs.DiscreteArray(num_values=self.action_dim, name="action")
