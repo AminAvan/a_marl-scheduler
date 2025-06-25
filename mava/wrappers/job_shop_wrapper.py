@@ -1,15 +1,16 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
+from typing import Any, Tuple, Union  # Added Any import
 import jax
 import jax.numpy as jnp
 from jumanji.env import Environment
 from jumanji.environments.packing.job_shop import JobShop
 from jumanji.types import TimeStep
 from jumanji.wrappers import Wrapper
-from typing import Tuple, Union
 import chex
 import logging
 from mava.types import Observation, ObservationGlobalState
+from dm_env import specs
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -31,7 +32,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         self.time_limit = getattr(env, "time_limit", None)
 
     @abstractmethod
-    def modify_timestep(self, timestep: TimeStep, state) -> TimeStep:
+    def modify_timestep(self, timestep: TimeStep, state: Any) -> TimeStep:
         pass
 
     def get_global_state(self, obs: Observation) -> chex.Array:
@@ -95,7 +96,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
         self.max_num_ops = env.max_num_ops
         self.action_dim = self.num_jobs * self.max_num_ops + 1
 
-    def modify_timestep(self, timestep: TimeStep, state) -> TimeStep:
+    def modify_timestep(self, timestep: TimeStep, state: Any) -> TimeStep:
         is_batched = state.ops_mask.ndim == 3
         num_envs = state.ops_mask.shape[0] if is_batched else 1
         obs = timestep.observation
