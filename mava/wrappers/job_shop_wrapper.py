@@ -1,7 +1,8 @@
 import jax
 import jax.numpy as jnp
 from jumanji.env import Environment
-from jumanji.types import TimeStep, State
+from jumanji.environments.packing.job_shop import JobShopState
+from jumanji.types import TimeStep
 from typing import Tuple, Dict, Any
 from mava.types import Observation
 
@@ -29,19 +30,19 @@ class JobShopWrapper(Environment):
         self.max_num_ops = env.max_num_ops
         self.action_dim = self.num_jobs * self.max_num_ops + 1  # Operations + no-op
 
-    def reset(self, key: jax.random.PRNGKey) -> Tuple[State, TimeStep]:
+    def reset(self, key: jax.random.PRNGKey) -> Tuple[JobShopState, TimeStep]:
         """Reset the environment and return a Mava-compatible timestep."""
         state, timestep = self._env.reset(key)
         timestep = self.modify_timestep(timestep, state)
-        return state, timestep
+        return state, timestepEXPORT
 
-    def step(self, state: State, action: jnp.ndarray, key: jax.random.PRNGKey) -> Tuple[State, TimeStep]:
+    def step(self, state: JobShopState, action: jnp.ndarray, key: jax.random.PRNGKey) -> Tuple[JobShopState, TimeStep]:
         """Step the environment with multi-agent actions."""
         state, timestep = self._env.step(state, action)
         timestep = self.modify_timestep(timestep, state)
         return state, timestep
 
-    def modify_timestep(self, timestep: TimeStep, state: State) -> TimeStep:
+    def modify_timestep(self, timestep: TimeStep, state: JobShopState) -> TimeStep:
         """
         Modify timestep for Mava compatibility.
 
