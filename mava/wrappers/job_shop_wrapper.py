@@ -43,6 +43,11 @@ class JobShopPatched(JobShop):
             max_op_duration=max_op_duration
         )
         super().__init__(generator=generator)
+        # Explicitly set attributes to avoid initialization issues
+        self.num_jobs = num_jobs
+        self.num_machines = num_machines
+        self.max_num_ops = max_num_ops
+        self.max_op_duration = max_op_duration
 
     def step(self, state: State, action: jnp.ndarray) -> Tuple[State, TimeStep]:
         """Step with JAX-compatible action validation."""
@@ -64,12 +69,12 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool = False):
         super().__init__(env)
         self.add_global_state = add_global_state
-        self.num_agents = env.generator.num_machines
+        self.num_agents = env.num_machines
         self.time_limit = getattr(env, "time_limit", None)
         if self.time_limit is None:
-            num_jobs = getattr(env.generator, "num_jobs", 5)
-            max_num_ops = getattr(env.generator, "max_num_ops", 4)
-            max_op_duration = getattr(env.generator, "max_op_duration", 4)
+            num_jobs = getattr(env, "num_jobs", 5)
+            max_num_ops = getattr(env, "max_num_ops", 4)
+            max_op_duration = getattr(env, "max_op_duration", 4)
             self.time_limit = num_jobs * max_num_ops * max_op_duration
 
     @abstractmethod
@@ -203,7 +208,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
             agents_view = jnp.concatenate([
                 obs_durations.reshape(-1),
                 obs_mask.reshape(-1),
-                obs_machine_ids.reshape(num_envs, -1),
+                obs_machine_ids.reshape(-1),
             ], axis=-1)
             agents_view = jnp.repeat(agents_view[None, :], self.num_agents, axis=0)
             agents_view = agents_view[None, ...]
