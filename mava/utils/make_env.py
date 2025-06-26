@@ -111,7 +111,9 @@ def add_extra_wrappers(
         train_env = AutoResetWrapper(train_env)   ## added by amin
         train_env = RecordEpisodeMetrics(train_env)   ## added by amin
         eval_env = AutoResetWrapper(eval_env)   ## added by amin
-        eval_env = RecordEpisodeMetrics(eval_env)   ## added by amin
+        # Also auto-reset the eval env so reset() returns a mava.types.Observation
+        eval_env = AutoResetWrapper(eval_env)
+        eval_env = RecordEpisodeMetrics(eval_env)
 
     return train_env, eval_env
 
