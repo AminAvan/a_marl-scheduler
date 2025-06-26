@@ -2,7 +2,7 @@
 defaults:
   - _self_
   - scenario: jobshop-test-scenario # [jobshop-test-scenario]
-  - networks: job_shop_network
+  - networks: job_shop_network # added by amin
 
 env_name: JobShop  # Used for logging purposes.
 
