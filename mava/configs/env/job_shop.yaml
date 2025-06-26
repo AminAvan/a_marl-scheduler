@@ -2,7 +2,7 @@
 defaults:
   - _self_
   - scenario: jobshop-test-scenario # [jobshop-test-scenario]
-  - networks: mava/configs/network/job_shop_network.yaml # added by amin
+  - network: job_shop_network # added by amin
 
 env_name: JobShop  # Used for logging purposes.
 
