@@ -1,7 +1,7 @@
 ### add amin
 import jax
 import haiku as hk
-from mava.networks.base import Network
+from mava.networks.base import FeedForwardActor, FeedForwardValueNet
 from jumanji.training.networks.job_shop.actor_critic import (
     make_actor_network_job_shop,
     make_critic_network_job_shop,
