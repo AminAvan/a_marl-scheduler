@@ -5,7 +5,7 @@ import jax
 import jax.numpy as jnp
 from jumanji.env import Environment
 from jumanji.environments.packing.job_shop import JobShop, State
-from jumanji.environments.packing.job_shop.generator import Generator
+from jumanji.environments.packing.job_shop.generator import RandomGenerator
 from jumanji.types import TimeStep
 from jumanji.wrappers import Wrapper
 import chex
@@ -19,25 +19,24 @@ logger = logging.getLogger(__name__)
 
 def aggregate_rewards(reward: chex.Array, num_agents: int, num_envs: int = 1) -> chex.Array:
     """Aggregate environment reward across agents."""
-    if reward.ndim == 0:  # Scalar reward
+    if reward.ndim == 0:
         return jnp.full((num_envs, num_agents), reward / num_agents)
-    if reward.ndim == 1:  # Batched reward [num_envs]
+    if reward.ndim == 1:
         return jnp.repeat(reward[:, None], num_agents, axis=-1)
-    return reward  # Already [num_envs, num_agents]
+    return reward
 
 class ObservationSpec(NamedTuple):
     """Custom observation spec for Mava compatibility."""
     specs: Dict[str, specs.Array]
 
     def generate_value(self):
-        """Generate a sample observation based on the specs."""
         return Observation(
             **{key: spec.generate_value() for key, spec in self.specs.items() if spec is not None}
         )
 
 class JobShopPatched(JobShop):
     def __init__(self, num_jobs: int, num_machines: int, max_num_ops: int, max_op_duration: int):
-        generator = Generator(
+        generator = RandomGenerator(
             num_jobs=num_jobs,
             num_machines=num_machines,
             max_num_ops=max_num_ops,
@@ -46,9 +45,9 @@ class JobShopPatched(JobShop):
         super().__init__(generator=generator)
 
     def step(self, state: State, action: jnp.ndarray) -> Tuple[State, TimeStep]:
-        """Step the environment with JAX-compatible action validation."""
-        indices = action[:, None]  # Shape: [num_machines, 1]
-        selected_mask = jnp.take_along_axis(state.action_mask, indices, axis=1).squeeze(axis=1)  # Shape: [num_machines]
+        """Step with JAX-compatible action validation."""
+        indices = action[:, None]
+        selected_mask = jnp.take_along_axis(state.action_mask, indices, axis=1).squeeze(axis=1)
         invalid = ~jnp.all(selected_mask)
 
         if invalid:
@@ -204,7 +203,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
             agents_view = jnp.concatenate([
                 obs_durations.reshape(-1),
                 obs_mask.reshape(-1),
-                obs_machine_ids.reshape(-1),
+                obs_machine_ids.reshape(num_envs, -1),
             ], axis=-1)
             agents_view = jnp.repeat(agents_view[None, :], self.num_agents, axis=0)
             agents_view = agents_view[None, ...]
