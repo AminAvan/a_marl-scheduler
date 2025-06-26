@@ -106,6 +106,13 @@ def add_extra_wrappers(
     train_env = RecordEpisodeMetrics(train_env)
     eval_env = RecordEpisodeMetrics(eval_env)
 
+    # ─── Only for JobShop: ensure eval.reset() returns a Mava Observation with .agents_view    ## added by amin
+    if config.env.env_name.lower() == "jobshop":   ## added by amin
+        train_env = AutoResetWrapper(train_env)   ## added by amin
+        train_env = RecordEpisodeMetrics(train_env)   ## added by amin
+        eval_env = AutoResetWrapper(eval_env)   ## added by amin
+        eval_env = RecordEpisodeMetrics(eval_env)   ## added by amin
+
     return train_env, eval_env
 
 
