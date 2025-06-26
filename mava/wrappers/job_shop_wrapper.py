@@ -5,6 +5,7 @@ import jax
 import jax.numpy as jnp
 from jumanji.env import Environment
 from jumanji.environments.packing.job_shop import JobShop, State
+from jumanji.environments.packing.job_shop.generator import Generator
 from jumanji.types import TimeStep
 from jumanji.wrappers import Wrapper
 import chex
@@ -36,7 +37,13 @@ class ObservationSpec(NamedTuple):
 
 class JobShopPatched(JobShop):
     def __init__(self, num_jobs: int, num_machines: int, max_num_ops: int, max_op_duration: int):
-        super().__init__(num_jobs=num_jobs, num_machines=num_machines, max_num_ops=max_num_ops, max_op_duration=max_op_duration)
+        generator = Generator(
+            num_jobs=num_jobs,
+            num_machines=num_machines,
+            max_num_ops=max_num_ops,
+            max_op_duration=max_op_duration
+        )
+        super().__init__(generator=generator)
 
     def step(self, state: State, action: jnp.ndarray) -> Tuple[State, TimeStep]:
         """Step the environment with JAX-compatible action validation."""
@@ -61,9 +68,9 @@ class JumanjiMarlWrapper(Wrapper, ABC):
         self.num_agents = env.generator.num_machines
         self.time_limit = getattr(env, "time_limit", None)
         if self.time_limit is None:
-            num_jobs = getattr(env, "num_jobs", 5)
-            max_num_ops = getattr(env, "max_num_ops", 4)
-            max_op_duration = getattr(env, "max_op_duration", 4)
+            num_jobs = getattr(env.generator, "num_jobs", 5)
+            max_num_ops = getattr(env.generator, "max_num_ops", 4)
+            max_op_duration = getattr(env.generator, "max_op_duration", 4)
             self.time_limit = num_jobs * max_num_ops * max_op_duration
 
     @abstractmethod
