@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from functools import cached_property
-from typing import Any, Tuple, Union, Dict, NamedTuple
+from typing import Any, Tuple, Dict, NamedTuple
 import jax
 import jax.numpy as jnp
 from jumanji.env import Environment
@@ -16,7 +16,6 @@ from dm_env import specs
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
-
 class ObservationSpec(NamedTuple):
     specs: Dict[str, specs.Array]
 
@@ -24,7 +23,6 @@ class ObservationSpec(NamedTuple):
         return Observation(
             **{key: spec.generate_value() for key, spec in self.specs.items() if spec is not None}
         )
-
 
 class JobShopPatched(JobShop):
     def __init__(self, num_jobs: int, num_machines: int, max_num_ops: int, max_op_duration: int):
@@ -48,7 +46,6 @@ class JobShopPatched(JobShop):
         state, timestep = super().step(state, action)
         return state, timestep
 
-
 class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool = False):
         super().__init__(env)
@@ -69,7 +66,6 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def step(self, state: Any, action: Any) -> Tuple[Any, TimeStep]:
         ...
 
-
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: Environment, add_global_state: bool = False):
         super().__init__(env, add_global_state)
@@ -77,7 +73,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
     def reset(self) -> Tuple[State, TimeStep]:
         state = self._env.reset()
         timestep = TimeStep(
-            observation=self._env.observation_spec().generate_value(),
+            observation=self._env.observation_spec.generate_value(),
             reward=0.0,
             discount=1.0,
             step_type=None
@@ -112,7 +108,8 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
     @cached_property
     def observation_spec(self) -> ObservationSpec:
-        feature_dim = self._env.observation_spec().agents_view.shape[-1]
+        # extract feature dimension from underlying env spec
+        feature_dim = self._env.observation_spec.agents_view.shape[-1]
         obs_specs = {
             "agents_view": specs.BoundedArray(
                 shape=(self.num_agents, feature_dim),
