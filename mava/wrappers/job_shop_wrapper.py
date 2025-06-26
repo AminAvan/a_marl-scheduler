@@ -50,7 +50,11 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool = False):
         super().__init__(env)
         self.add_global_state = add_global_state
+        # Number of parallel agents (machines)
         self.num_agents = env.num_machines
+        # Provide action_dim for downstream wrappers like AutoResetWrapper
+        self.action_dim = self.num_agents
+        # Compute a reasonable time limit if not provided
         self.time_limit = getattr(env, "time_limit", None)
         if self.time_limit is None:
             num_jobs = getattr(env, "num_jobs", 5)
