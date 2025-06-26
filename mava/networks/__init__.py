@@ -23,3 +23,5 @@ from mava.networks.base import (
     ScannedRNN,
 )
 from mava.networks.sable_network import SableNetwork
+
+from mava.networks.job_shop_network import JobShopNetwork ## add amin

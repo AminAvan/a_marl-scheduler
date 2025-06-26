@@ -2,6 +2,7 @@
 defaults:
   - _self_
   - scenario: jobshop-test-scenario # [jobshop-test-scenario]
+  - networks: job_shop_network
 
 env_name: JobShop  # Used for logging purposes.
 

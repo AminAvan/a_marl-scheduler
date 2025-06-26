@@ -1,0 +1,8 @@
+defaults:
+  - _self_
+
+networks:
+  actor:
+    network: mava.networks.job_shop_network.JobShopNetwork
+  critic:
+    network: mava.networks.job_shop_network.JobShopNetwork
