@@ -8,13 +8,13 @@ from jumanji.environments.packing.job_shop import JobShop, State
 from jumanji.environments.packing.job_shop.generator import RandomGenerator
 from jumanji.types import TimeStep
 from jumanji.wrappers import Wrapper
-import chex
 import logging
 from mava.types import Observation, ObservationGlobalState
 from dm_env import specs
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+
 
 class ObservationSpec(NamedTuple):
     specs: Dict[str, specs.Array]
@@ -24,6 +24,7 @@ class ObservationSpec(NamedTuple):
         return Observation(
             **{key: spec.generate_value() for key, spec in self.specs.items() if spec is not None}
         )
+
 
 class JobShopPatched(JobShop):
     def __init__(
@@ -52,6 +53,7 @@ class JobShopPatched(JobShop):
     def step(self, state: State, action: jnp.ndarray) -> Tuple[State, TimeStep]:
         return super().step(state, action)
 
+
 class JumanjiMarlWrapper(Wrapper, ABC):
     def __init__(self, env: Environment, add_global_state: bool = False):
         super().__init__(env)
@@ -75,6 +77,7 @@ class JumanjiMarlWrapper(Wrapper, ABC):
     @abstractmethod
     def step(self, state: Any, action: Any) -> Tuple[Any, TimeStep]:
         ...
+
 
 class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: Environment, add_global_state: bool = False):
