@@ -93,7 +93,7 @@ _gym_registry = {
 
 
 def add_extra_wrappers(
-    train_env: MarlEnv, eval_env: MarlEnv, config: DictConfig
+        train_env: MarlEnv, eval_env: MarlEnv, config: DictConfig
 ) -> Tuple[MarlEnv, MarlEnv]:
     # Disable the AgentID wrapper if the environment has implicit agent IDs.
     config.system.add_agent_id = config.system.add_agent_id & (~config.env.implicit_agent_id)
@@ -102,8 +102,19 @@ def add_extra_wrappers(
         train_env = AgentIDWrapper(train_env)
         eval_env = AgentIDWrapper(eval_env)
 
+    # ─── train: always auto-reset + metrics
     train_env = AutoResetWrapper(train_env)
     train_env = RecordEpisodeMetrics(train_env)
+
+    # ─── eval: for JobShop *only*, re-wrap with the JobShopWrapper so
+    # its reset() returns a mava.types.Observation (with .agents_view).
+    if config.env.env_name.lower() == "jobshop":
+        from mava.wrappers.job_shop_wrapper import JobShopWrapper
+
+        # re-wrap whatever eval_env currently is
+        eval_env = JobShopWrapper(eval_env, add_global_state=False)
+
+    # then record metrics (all envs, including JobShop)
     eval_env = RecordEpisodeMetrics(eval_env)
 
     return train_env, eval_env
