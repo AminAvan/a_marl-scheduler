@@ -94,7 +94,7 @@ _gym_registry = {
 
 def add_extra_wrappers(
         train_env: MarlEnv, eval_env: MarlEnv, config: DictConfig
-) -> Tuple[MarlEnv, MarlEnv]:
+            ) -> Tuple[MarlEnv, MarlEnv]:
     # Disable the AgentID wrapper if the environment has implicit agent IDs.
     config.system.add_agent_id = config.system.add_agent_id & (~config.env.implicit_agent_id)
 
