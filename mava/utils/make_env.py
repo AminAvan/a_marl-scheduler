@@ -109,10 +109,21 @@ def add_extra_wrappers(
     # ─── eval: for JobShop *only*, re-wrap with the JobShopWrapper so
     # its reset() returns a mava.types.Observation (with .agents_view).
     if config.env.env_name.lower() == "jobshop":
+        # First apply your JobShopWrapper so that reset() returns (state, TimeStep)
         from mava.wrappers.job_shop_wrapper import JobShopWrapper
-
-        # re-wrap whatever eval_env currently is
         eval_env = JobShopWrapper(eval_env, add_global_state=False)
+
+        # Then unwrap the TimeStep into its .observation
+        from jumanji.wrappers import Wrapper as _BaseWrapper
+        class _ObsUnwrapper(_BaseWrapper):
+            def reset(self):
+                state, ts = self._env.reset()
+                return state, ts.observation
+
+            def step(self, state, action):
+                return self._env.step(state, action)
+
+        eval_env = _ObsUnwrapper(eval_env)
 
     # then record metrics (all envs, including JobShop)
     eval_env = RecordEpisodeMetrics(eval_env)
