@@ -105,8 +105,9 @@ class JobShopWrapper(JumanjiMarlWrapper):
     @cached_property
     def observation_spec(self) -> ObservationSpec:
         # Define based on actual Jumanji observation structure
-        machine_shape = self._env.observation_spec().machines.shape
-        job_shape = self._env.observation_spec().jobs.shape
+        jumanji_obs_spec = self._env.observation_spec
+        machine_shape = jumanji_obs_spec.machines.shape
+        job_shape = jumanji_obs_spec.jobs.shape
         feat = machine_shape[-1] + job_shape[-1]  # Concatenated features
         specs_map = {
             "agents_view": specs.BoundedArray(
@@ -116,8 +117,8 @@ class JobShopWrapper(JumanjiMarlWrapper):
                 maximum=float('inf'),  # Adjust based on data
                 name="agents_view",
             ),
-            "action_mask": self._env.observation_spec().action_mask,
-            "step_count": self._env.observation_spec().step_count,
+            "action_mask": jumanji_obs_spec.action_mask,
+            "step_count": jumanji_obs_spec.step_count,
         }
         if self.add_global_state:
             specs_map["global_state"] = specs.Array(
