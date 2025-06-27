@@ -66,53 +66,62 @@ class JobShopWrapper(JumanjiMarlWrapper):
     def __init__(self, env: Environment, add_global_state: bool = False):
         super().__init__(env, add_global_state)
 
-    def reset(self) -> Tuple[State, Observation]:
-        # reset underlying env, then produce Mava Observation only
-        state = self._env.reset()
-        obs = self.observation_spec.generate_value()
-        if self.add_global_state:
-            gs = self.get_global_state(obs)
-            obs = ObservationGlobalState(
-                global_state=gs,
-                agents_view=obs.agents_view,
-                action_mask=obs.action_mask,
-                step_count=obs.step_count,
-            )
-        return state, obs
+    def reset(self) -> Tuple[State, TimeStep]:
+        state, ts = self._env.reset()
+        mava_obs = self._to_mava_obs(ts.observation)
+        ts = ts.replace(observation=mava_obs)
+        return state, ts
 
     def step(self, state: State, action: jnp.ndarray) -> Tuple[State, TimeStep]:
-        # step underlying env normally (for metrics/learning)
-        return super().step(state, action)
+        state, ts = super().step(state, action)
+        mava_obs = self._to_mava_obs(ts.observation)
+        ts = ts.replace(observation=mava_obs)
+        return state, ts
+
+    def _to_mava_obs(self, jumanji_obs) -> Observation:
+        # Example conversion: adapt based on JobShop's observation structure
+        # Jumanji's Observation has 'machines', 'jobs', 'action_mask', etc.
+        agents_view = jnp.concatenate([jumanji_obs.machines, jumanji_obs.jobs], axis=-1)
+        action_mask = jumanji_obs.action_mask
+        step_count = jumanji_obs.step_count
+        if self.add_global_state:
+            gs = self.get_global_state(Observation(
+                agents_view=agents_view,
+                action_mask=action_mask,
+                step_count=step_count
+            ))
+            return ObservationGlobalState(
+                global_state=gs,
+                agents_view=agents_view,
+                action_mask=action_mask,
+                step_count=step_count
+            )
+        return Observation(
+            agents_view=agents_view,
+            action_mask=action_mask,
+            step_count=step_count
+        )
 
     @cached_property
     def observation_spec(self) -> ObservationSpec:
-        feat = self._env.observation_spec.agents_view.shape[-1]
+        # Define based on actual Jumanji observation structure
+        machine_shape = self._env.observation_spec().machines.shape
+        job_shape = self._env.observation_spec().jobs.shape
+        feat = machine_shape[-1] + job_shape[-1]  # Concatenated features
         specs_map = {
             "agents_view": specs.BoundedArray(
                 shape=(self.num_agents, feat),
                 dtype=jnp.float32,
                 minimum=0.0,
-                maximum=1.0,
+                maximum=float('inf'),  # Adjust based on data
                 name="agents_view",
             ),
-            "action_mask": specs.BoundedArray(
-                shape=(self.num_agents, self.num_agents),
-                dtype=jnp.bool_,
-                minimum=False,
-                maximum=True,
-                name="action_mask",
-            ),
-            "step_count": specs.BoundedArray(
-                shape=(),
-                dtype=jnp.int32,
-                minimum=0,
-                maximum=self.time_limit,
-                name="step_count",
-            ),
+            "action_mask": self._env.observation_spec().action_mask,
+            "step_count": self._env.observation_spec().step_count,
         }
         if self.add_global_state:
             specs_map["global_state"] = specs.Array(
-                shape=(self.num_agents, self.num_agents * feat),
+                shape=(self.num_agents, feat * self.num_agents),
                 dtype=jnp.float32,
                 name="global_state",
             )
