@@ -91,7 +91,6 @@ _gym_registry = {
     "SMACLite": SmacWrapper,
 }
 
-
 def add_extra_wrappers(
         train_env: MarlEnv, eval_env: MarlEnv, config: DictConfig
 ) -> Tuple[MarlEnv, MarlEnv]:
@@ -113,15 +112,15 @@ def add_extra_wrappers(
         from mava.wrappers.job_shop_wrapper import JobShopWrapper
         eval_env = JobShopWrapper(eval_env, add_global_state=False)
 
-        # Then unwrap the TimeStep into its .observation
+        # Then unwrap the TimeStep, preserving Mava Observation
         from jumanji.wrappers import Wrapper as _BaseWrapper
         class _ObsUnwrapper(_BaseWrapper):
             def reset(self):
                 state, ts = self._env.reset()
-                return state, ts.observation
-
+                return state, ts.observation  # Already Mava Observation from JobShopWrapper
             def step(self, state, action):
-                return self._env.step(state, action)
+                state, ts = self._env.step(state, action)
+                return state, ts.observation  # Already Mava Observation from JobShopWrapper
 
         eval_env = _ObsUnwrapper(eval_env)
 
@@ -129,7 +128,6 @@ def add_extra_wrappers(
     eval_env = RecordEpisodeMetrics(eval_env)
 
     return train_env, eval_env
-
 
 def make_jumanji_env(config: DictConfig, add_global_state: bool = False) -> Tuple[MarlEnv, MarlEnv]:
     """
@@ -160,7 +158,6 @@ def make_jumanji_env(config: DictConfig, add_global_state: bool = False) -> Tupl
 
     train_env, eval_env = add_extra_wrappers(train_env, eval_env, config)
     return train_env, eval_env
-
 
 def make_jaxmarl_env(config: DictConfig, add_global_state: bool = False) -> Tuple[MarlEnv, MarlEnv]:
     """
@@ -197,7 +194,6 @@ def make_jaxmarl_env(config: DictConfig, add_global_state: bool = False) -> Tupl
 
     return train_env, eval_env
 
-
 def make_matrax_env(config: DictConfig, add_global_state: bool = False) -> Tuple[MarlEnv, MarlEnv]:
     """
     Creates Matrax environments for training and evaluation.
@@ -226,7 +222,6 @@ def make_matrax_env(config: DictConfig, add_global_state: bool = False) -> Tuple
     train_env, eval_env = add_extra_wrappers(train_env, eval_env, config)
     return train_env, eval_env
 
-
 def make_gigastep_env(
     config: DictConfig, add_global_state: bool = False
 ) -> Tuple[MarlEnv, MarlEnv]:
@@ -254,7 +249,6 @@ def make_gigastep_env(
 
     train_env, eval_env = add_extra_wrappers(train_env, eval_env, config)
     return train_env, eval_env
-
 
 def make_gym_env(
     config: DictConfig,
@@ -292,7 +286,6 @@ def make_gym_env(
     envs = GymToJumanji(envs)
 
     return envs
-
 
 def make(config: DictConfig, add_global_state: bool = False) -> Tuple[MarlEnv, MarlEnv]:
     """
