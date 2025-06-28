@@ -38,6 +38,15 @@ class JobShopWrapper(JumanjiMarlWrapper):
     """Multi-agent wrapper for the JobShop environment."""
 
     def __init__(self, env: Environment, add_global_state: bool = False):
+        # The common wrapper expects `num_agents` and `time_limit` on the env.
+        if not hasattr(env, "num_agents"):
+            env.num_agents = getattr(env, "num_machines", 1)
+        if not hasattr(env, "time_limit"):
+            nj = getattr(env, "num_jobs", 5)
+            mo = getattr(env, "max_num_ops", 4)
+            md = getattr(env, "max_op_duration", 4)
+            env.time_limit = nj * mo * md
+
         super().__init__(env, add_global_state)
         self._env: JobShop
 
