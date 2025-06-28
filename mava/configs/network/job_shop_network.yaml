@@ -4,8 +4,10 @@ defaults:
 
 networks:
   actor:
+    class: mava.networks.job_shop_network.JobShopActor
     torso: mava.networks.job_shop_network.JobShopTorso
     action_head: mava.networks.heads.CategoricalHead
   critic:
+    class: mava.networks.job_shop_network.JobShopCritic
     torso: mava.networks.job_shop_network.JobShopTorso
     centralised_critic: False
