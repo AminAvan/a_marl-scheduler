@@ -130,8 +130,18 @@ class JumanjiMarlWrapper(Wrapper, ABC):
 
     @cached_property
     def action_dim(self) -> chex.Array:
-        """Get the actions dim for each agent."""
-        return int(self._env.action_spec.num_values[0])
+        """Get the action dimension for each agent.
+
+        Some Jumanji environments expose a scalar ``num_values`` in their
+        ``action_spec`` while others use an array with length equal to the
+        number of agents.  Handle both cases gracefully.
+        """
+        num_values = self._env.action_spec.num_values
+        # ``num_values`` can either be an int or a sequence / array-like
+        try:
+            return int(num_values[0])
+        except Exception:
+            return int(num_values)
 
 
 class RwareWrapper(JumanjiMarlWrapper):
