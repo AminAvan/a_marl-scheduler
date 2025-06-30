@@ -3,6 +3,7 @@ import haiku as hk
 import jax.numpy as jnp
 from mava.networks.base import FeedForwardActor, FeedForwardValueNet
 from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
+from job_shop_wrapper import CustomObservation  # Import CustomObservation
 
 class CustomJobShopEncoder(hk.Module):
     """Custom encoder for JobShop structured observation."""
@@ -22,8 +23,9 @@ class JobShopActor(FeedForwardActor):
         super().__init__(*args, **kwargs)
         self.torso = CustomJobShopEncoder()
 
-    def __call__(self, observation: JumanjiObservation) -> chex.Array:
-        embedding = self.torso(observation)
+    def __call__(self, observation: CustomObservation) -> chex.Array:
+        jumanji_obs = observation.jumanji_obs
+        embedding = self.torso(jumanji_obs)
         return self.action_head(embedding)
 
 class JobShopCritic(FeedForwardValueNet):
@@ -33,6 +35,7 @@ class JobShopCritic(FeedForwardValueNet):
         self.torso = CustomJobShopEncoder()
         self.centralised_critic = False
 
-    def __call__(self, observation: JumanjiObservation) -> chex.Array:
-        embedding = self.torso(observation)
+    def __call__(self, observation: CustomObservation) -> chex.Array:
+        jumanji_obs = observation.jumanji_obs
+        embedding = self.torso(jumanji_obs)
         return self.value_head(embedding)
