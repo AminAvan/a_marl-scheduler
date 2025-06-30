@@ -1,4 +1,4 @@
-from mava.wrappers import Wrapper
+from jumanji.wrappers import Wrapper
 import jax.numpy as jnp
 
 class CustomAgentIDWrapper(Wrapper):
