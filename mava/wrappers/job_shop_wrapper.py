@@ -25,9 +25,15 @@ logging.basicConfig(level=logging.INFO)
 class CustomObservation:
     jumanji_obs: JumanjiObservation
 
-class JobShopWrapper(JumanjiMarlWrapper):  # Assuming this inherits from a base wrapper
+# Custom Observation Class
+@dataclass
+class CustomObservation:
+    jumanji_obs: JumanjiObservation
+
+# Environment Wrapper
+class JobShopWrapper(JumanjiMarlWrapper):
     def modify_timestep(self, timestep: TimeStep) -> TimeStep[CustomObservation]:
-        """Modify the timestep to wrap the observation in CustomObservation."""
+        """Wrap the observation in CustomObservation."""
         observation = CustomObservation(jumanji_obs=timestep.observation)
         reward = jnp.repeat(timestep.reward, self.num_agents)
         discount = jnp.repeat(timestep.discount, self.num_agents)
@@ -41,8 +47,8 @@ class JobShopWrapper(JumanjiMarlWrapper):  # Assuming this inherits from a base 
 
     @cached_property
     def observation_spec(self) -> Spec:
-        """Define the observation spec to match CustomObservation."""
-        jumanji_spec = self._env.observation_spec  # Original Jumanji observation spec
+        """Return a spec for CustomObservation."""
+        jumanji_spec = self._env.observation_spec  # Jumanji observation spec
         return Spec(
             CustomObservation,
             "CustomObservationSpec",
