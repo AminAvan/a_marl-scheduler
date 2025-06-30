@@ -35,3 +35,4 @@ from mava.wrappers.jumanji import (
 from mava.wrappers.job_shop_wrapper import JobShopWrapper ## added by amin
 from mava.wrappers.matrax import MatraxWrapper
 from mava.wrappers.observation import AgentIDWrapper
+from mava.wrappers.custom_agent_id_wrapper import CustomAgentIDWrapper  ## add amin
