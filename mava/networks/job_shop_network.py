@@ -3,7 +3,7 @@ import haiku as hk
 import jax.numpy as jnp
 from mava.networks.base import FeedForwardActor, FeedForwardValueNet
 from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
-from mava.wrappers.job_shop_wrapper.py import CustomObservation  # Import CustomObservation
+from mava.wrappers.job_shop_wrapper import CustomObservation  # Import CustomObservation
 
 class CustomJobShopEncoder(hk.Module):
     """Custom encoder for JobShop structured observation."""
