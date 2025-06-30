@@ -3,19 +3,15 @@ import haiku as hk
 import jax.numpy as jnp
 from mava.networks.base import FeedForwardActor, FeedForwardValueNet
 from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
-from mava.wrappers.job_shop_wrapper import CustomObservation  # Import CustomObservation
+from mava.wrappers.job_shop_wrapper import CustomJobShopObservation  # Correct import
 
 class CustomJobShopEncoder(hk.Module):
     """Custom encoder for JobShop structured observation."""
     def __call__(self, observation: JumanjiObservation) -> chex.Array:
-        # Process each component of the structured observation
         ops_machines_emb = hk.Linear(64)(observation.ops_machine_ids.flatten())
         ops_durations_emb = hk.Linear(64)(observation.ops_durations.flatten())
-        # Combine embeddings (add more components as needed)
         combined = jnp.concatenate([ops_machines_emb, ops_durations_emb], axis=-1)
-        # Further processing with an MLP
-        x = hk.nets.MLP([128, 64])(combined)
-        return x
+        return hk.nets.MLP([128, 64])(combined)
 
 class JobShopActor(FeedForwardActor):
     """Actor using a custom JobShop encoder."""
@@ -23,7 +19,7 @@ class JobShopActor(FeedForwardActor):
         super().__init__(*args, **kwargs)
         self.torso = CustomJobShopEncoder()
 
-    def __call__(self, observation: CustomObservation) -> chex.Array:
+    def __call__(self, observation: CustomJobShopObservation) -> chex.Array:
         jumanji_obs = observation.jumanji_obs
         embedding = self.torso(jumanji_obs)
         return self.action_head(embedding)
@@ -35,7 +31,7 @@ class JobShopCritic(FeedForwardValueNet):
         self.torso = CustomJobShopEncoder()
         self.centralised_critic = False
 
-    def __call__(self, observation: CustomObservation) -> chex.Array:
+    def __call__(self, observation: CustomJobShopObservation) -> chex.Array:
         jumanji_obs = observation.jumanji_obs
         embedding = self.torso(jumanji_obs)
         return self.value_head(embedding)
