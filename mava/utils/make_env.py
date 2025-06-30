@@ -67,6 +67,8 @@ from mava.wrappers import (
     async_multiagent_worker,
 )
 
+from mava.wrappers.custom_agent_id_wrapper import CustomAgentIDWrapper # add amin
+
 # Registry mapping environment names to their generator and wrapper classes.
 _jumanji_registry = {
     "RobotWarehouse": {"generator": RwareRandomGenerator, "wrapper": RwareWrapper},
@@ -92,16 +94,21 @@ _gym_registry = {
 }
 
 def add_extra_wrappers(
-        train_env: MarlEnv, eval_env: MarlEnv, config: DictConfig
+    train_env: MarlEnv, eval_env: MarlEnv, config: DictConfig
 ) -> Tuple[MarlEnv, MarlEnv]:
     # Disable the AgentID wrapper if the environment has implicit agent IDs.
     config.system.add_agent_id = config.system.add_agent_id & (~config.env.implicit_agent_id)
 
+    # Apply the appropriate AgentID wrapper based on the environment name
     if config.system.add_agent_id:
-        train_env = AgentIDWrapper(train_env)
-        eval_env = AgentIDWrapper(eval_env)
+        if config.env.env_name.lower() == "jobshop":
+            train_env = CustomAgentIDWrapper(train_env)
+            eval_env = CustomAgentIDWrapper(eval_env)
+        else:
+            train_env = AgentIDWrapper(train_env)
+            eval_env = AgentIDWrapper(eval_env)
 
-    # ─── train: always auto-reset + metrics
+    # ─── train: always auto-reset + metrics (applies to all environments)
     train_env = AutoResetWrapper(train_env)
     train_env = RecordEpisodeMetrics(train_env)
 
@@ -124,7 +131,7 @@ def add_extra_wrappers(
 
         eval_env = _ObsUnwrapper(eval_env)
 
-    # then record metrics (all envs, including JobShop)
+    # Then record metrics (applies to all environments, including JobShop)
     eval_env = RecordEpisodeMetrics(eval_env)
 
     return train_env, eval_env
