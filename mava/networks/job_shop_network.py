@@ -1,48 +1,38 @@
-import jax
 import chex
+import haiku as hk
+import jax.numpy as jnp
 from mava.networks.base import FeedForwardActor, FeedForwardValueNet
-from jumanji.training.networks.job_shop.actor_critic import JobShopTorso
-from mava.types import Observation
+from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
+
+class CustomJobShopEncoder(hk.Module):
+    """Custom encoder for JobShop structured observation."""
+    def __call__(self, observation: JumanjiObservation) -> chex.Array:
+        # Process each component of the structured observation
+        ops_machines_emb = hk.Linear(64)(observation.ops_machine_ids.flatten())
+        ops_durations_emb = hk.Linear(64)(observation.ops_durations.flatten())
+        # Combine embeddings (add more components as needed)
+        combined = jnp.concatenate([ops_machines_emb, ops_durations_emb], axis=-1)
+        # Further processing with an MLP
+        x = hk.nets.MLP([128, 64])(combined)
+        return x
 
 class JobShopActor(FeedForwardActor):
-    """Actor using Jumanji's JobShop GNN torso."""
-    torso: JobShopTorso
+    """Actor using a custom JobShop encoder."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.torso = CustomJobShopEncoder()
 
-    def __call__(self, observation: Observation) -> chex.Array:
-        # Convert Mava Observation to a structure compatible with JobShopTorso
-        jumanji_obs = self._to_jumanji_obs(observation)
-        obs_embedding = self.torso(jumanji_obs)
-        return self.action_head(obs_embedding)
-
-    def _to_jumanji_obs(self, obs: Observation):
-        # Convert Mava Observation to Jumanji Observation
-        from jumanji.environments.packing.job_shop.types import Observation as JumanjiObs
-        feat_per_agent = obs.agents_view.shape[-1] // 2  # Split features between machines and jobs
-        return JumanjiObs(
-            machines=obs.agents_view[:, :feat_per_agent],
-            jobs=obs.agents_view[:, feat_per_agent:],
-            action_mask=obs.action_mask,
-            step_count=obs.step_count
-        )
+    def __call__(self, observation: JumanjiObservation) -> chex.Array:
+        embedding = self.torso(observation)
+        return self.action_head(embedding)
 
 class JobShopCritic(FeedForwardValueNet):
-    """Critic using Jumanji's JobShop GNN torso."""
-    torso: JobShopTorso
-    centralised_critic: bool = False
+    """Critic using a custom JobShop encoder."""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.torso = CustomJobShopEncoder()
+        self.centralised_critic = False
 
-    def __call__(self, observation: Observation) -> chex.Array:
-        # Convert Mava Observation to a structure compatible with JobShopTorso
-        jumanji_obs = self._to_jumanji_obs(observation)
-        obs_embedding = self.torso(jumanji_obs)
-        return self.value_head(obs_embedding)
-
-    def _to_jumanji_obs(self, obs: Observation):
-        # Convert Mava Observation to Jumanji Observation (same as in JobShopActor)
-        from jumanji.environments.packing.job_shop.types import Observation as JumanjiObs
-        feat_per_agent = obs.agents_view.shape[-1] // 2  # Split features between machines and jobs
-        return JumanjiObs(
-            machines=obs.agents_view[:, :feat_per_agent],
-            jobs=obs.agents_view[:, feat_per_agent:],
-            action_mask=obs.action_mask,
-            step_count=obs.step_count
-        )
+    def __call__(self, observation: JumanjiObservation) -> chex.Array:
+        embedding = self.torso(observation)
+        return self.value_head(embedding)
