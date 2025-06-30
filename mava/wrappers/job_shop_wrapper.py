@@ -6,10 +6,11 @@ from jumanji import specs
 from jumanji.env import Environment
 from jumanji.environments.packing.job_shop import JobShop, State
 from jumanji.environments.packing.job_shop.generator import RandomGenerator
+from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
 from jumanji.types import TimeStep
 import logging
 
-from mava.types import Observation, ObservationGlobalState
+from mava.types import Observation
 from mava.wrappers.jumanji import JumanjiMarlWrapper
 
 # Configure logging
@@ -33,9 +34,14 @@ class JobShopPatched(JobShop):
     def step(self, state: State, action: jnp.ndarray) -> Tuple[State, TimeStep]:
         return super().step(state, action)
 
+class CustomJobShopObservation(Observation):
+    """Custom observation class that includes the full Jumanji observation."""
+    def __init__(self, jumanji_obs: JumanjiObservation, **kwargs):
+        super().__init__(**kwargs)
+        self.jumanji_obs = jumanji_obs
 
 class JobShopWrapper(JumanjiMarlWrapper):
-    """Multi-agent wrapper for the JobShop environment."""
+    """Multi-agent wrapper for the JobShop environment with custom observation handling."""
 
     def __init__(self, env: Environment, add_global_state: bool = False):
         # The common wrapper expects `num_agents` and `time_limit` on the env.
@@ -50,17 +56,14 @@ class JobShopWrapper(JumanjiMarlWrapper):
         super().__init__(env, add_global_state)
         self._env: JobShop
 
-    def modify_timestep(self, timestep: TimeStep) -> TimeStep[Observation]:
-        """Convert Jumanji observation to a Mava observation."""
+    def modify_timestep(self, timestep: TimeStep) -> TimeStep[CustomJobShopObservation]:
+        """Convert Jumanji observation to a custom Mava observation with full Jumanji obs."""
+        obs = timestep.observation  # This is the JumanjiObservation
 
-        obs = timestep.observation
-        agents_view = jnp.concatenate(
-            [obs.machines.astype(float), obs.jobs.astype(float)],
-            axis=-1,
-        )
-
-        observation = Observation(
-            agents_view=agents_view,
+        # Create a custom observation that includes the full Jumanji observation
+        observation = CustomJobShopObservation(
+            jumanji_obs=obs,
+            agents_view=None,  # Not used, but required by Mava's Observation
             action_mask=obs.action_mask,
             step_count=jnp.repeat(obs.step_count, self.num_agents),
         )
@@ -75,40 +78,24 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
     @cached_property
     def observation_spec(self) -> specs.Spec:
-        """Specification of the environment observations."""
+        """Specification of the custom environment observations."""
+        jumanji_spec = self._env.observation_spec
 
-        spec = self._env.observation_spec
-        machine_feat = spec.machines.shape[-1]
-        job_feat = spec.jobs.shape[-1]
-        feat = machine_feat + job_feat
-
-        agents_view = specs.Array(
-            (self.num_agents, feat), spec.machines.dtype, "agents_view"
-        )
-
-        step_count = specs.BoundedArray(
-            (self.num_agents,),
-            int,
-            jnp.zeros(self.num_agents, dtype=int),
-            jnp.repeat(self.time_limit, self.num_agents),
-            "step_count",
-        )
-
+        # Define specs for the custom observation fields
         obs_data = {
-            "agents_view": agents_view,
-            "action_mask": spec.action_mask,
-            "step_count": step_count,
+            "jumanji_obs": jumanji_spec,  # Full Jumanji observation spec
+            "agents_view": specs.Array((1,), float, "agents_view"),  # Placeholder, not used
+            "action_mask": jumanji_spec.action_mask,
+            "step_count": specs.BoundedArray(
+                (self.num_agents,),
+                int,
+                jnp.zeros(self.num_agents, dtype=int),
+                jnp.repeat(self.time_limit, self.num_agents),
+                "step_count",
+            ),
         }
 
-        if self.add_global_state:
-            obs_data["global_state"] = specs.Array(
-                (self.num_agents, self.num_agents * feat),
-                spec.machines.dtype,
-                "global_state",
-            )
-            return specs.Spec(ObservationGlobalState, "ObservationSpec", **obs_data)
-
-        return specs.Spec(Observation, "ObservationSpec", **obs_data)
+        return specs.Spec(CustomJobShopObservation, "CustomObservationSpec", **obs_data)
 
     @cached_property
     def action_spec(self) -> specs.DiscreteArray:
