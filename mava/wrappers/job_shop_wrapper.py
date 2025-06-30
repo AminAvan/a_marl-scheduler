@@ -1,6 +1,9 @@
 from functools import cached_property
 from typing import Any, Dict, Tuple
 
+from dataclasses import dataclass
+from jumanji.specs import Spec
+
 import jax.numpy as jnp
 from jumanji import specs
 from jumanji.env import Environment
@@ -15,6 +18,37 @@ from mava.wrappers.jumanji import JumanjiMarlWrapper
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
+
+
+# Define the CustomObservation class
+@dataclass
+class CustomObservation:
+    jumanji_obs: JumanjiObservation
+
+class JobShopWrapper(JumanjiMarlWrapper):  # Assuming this inherits from a base wrapper
+    def modify_timestep(self, timestep: TimeStep) -> TimeStep[CustomObservation]:
+        """Modify the timestep to wrap the observation in CustomObservation."""
+        observation = CustomObservation(jumanji_obs=timestep.observation)
+        reward = jnp.repeat(timestep.reward, self.num_agents)
+        discount = jnp.repeat(timestep.discount, self.num_agents)
+        metrics = {"env_metrics": {}}
+        return timestep.replace(
+            observation=observation,
+            reward=reward,
+            discount=discount,
+            extras=metrics
+        )
+
+    @cached_property
+    def observation_spec(self) -> Spec:
+        """Define the observation spec to match CustomObservation."""
+        jumanji_spec = self._env.observation_spec  # Original Jumanji observation spec
+        return Spec(
+            CustomObservation,
+            "CustomObservationSpec",
+            jumanji_obs=jumanji_spec
+        )
+
 
 class JobShopPatched(JobShop):
     def __init__(self, num_jobs: int, num_machines: int, max_num_ops: int, max_op_duration: int):
