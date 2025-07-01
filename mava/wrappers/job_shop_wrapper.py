@@ -9,7 +9,6 @@ from jumanji.environments.packing.job_shop.types import Observation as JumanjiOb
 from jumanji.types import TimeStep
 import logging
 
-from mava.types import Observation
 from mava.wrappers.jumanji import JumanjiMarlWrapper
 
 logging.basicConfig(level=logging.INFO)
@@ -27,21 +26,23 @@ class CustomJobShopObservation(NamedTuple):
 class JobShopWrapper(JumanjiMarlWrapper):
     """
     Multi-agent wrapper around Jumanji's JobShop, splitting
-    the single-agent environment into `num_agents` agents.
+    the single-agent environment into one agent per machine.
     """
 
     def __init__(
         self,
         env: JobShop,
-        num_agents: int,
         add_global_state: bool = False,
     ):
-        # Number of agents and the environment's time limit
-        self.num_agents = num_agents
-        self.time_limit = env.time_limit
-        # Infer per-agent observation feature dimension from Jumanji spec
+        # Underlying JobShop spec
         j_spec = env.observation_spec()
+        # Number of machines == number of agents
+        self.num_agents = int(j_spec.machines_job_ids.shape[0])
+        # Time limit from the env
+        self.time_limit = env.time_limit
+        # Flatten mask to get per-agent feature dimension
         self.obs_feature_dim = int(jnp.prod(j_spec.ops_mask.shape))
+        # Initialize parent (sets up wrappers, etc.)
         super().__init__(env, add_global_state)
 
     @cached_property
@@ -72,18 +73,18 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
     @cached_property
     def action_spec(self) -> specs.DiscreteArray:
-        """Each agent chooses one of `num_agents` actions."""
+        """Each agent (machine) chooses a job to process."""
         return specs.DiscreteArray(num_values=self.num_agents, name="action")
 
     def reset(self, seed: int) -> TimeStep:
-        """Reset and immediately convert to a multi-agent timestep."""
+        """Reset underlying env and convert to multi-agent timestep."""
         ts = self._env.reset(seed)
         return self.modify_timestep(ts)
 
     def step(self, actions: chex.Array) -> TimeStep:
         """
-        Step the underlying single-agent env using the first agent's action,
-        then convert the resulting timestep.
+        Step the underlying single-agent env using the first agent's pick,
+        then convert to a multi-agent timestep.
         """
         sa_action = int(actions[0])
         ts = self._env.step(sa_action)
@@ -93,11 +94,12 @@ class JobShopWrapper(JumanjiMarlWrapper):
         """
         Convert a single-agent TimeStep into a multi-agent TimeStep.
         """
-        # Flatten the ops_mask into a per-agent observation
+        # Build per-agent observation by flattening ops_mask
         flat_obs = ts.observation.ops_mask.reshape(-1)
         agents_view = jnp.repeat(
             jnp.expand_dims(flat_obs, 0), self.num_agents, axis=0
         )
+        # Step count for each agent (optional)
         step_count = jnp.arange(self.num_agents)
 
         return TimeStep(
