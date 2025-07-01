@@ -8,7 +8,7 @@ from typing import NamedTuple, Optional, Dict
 
 import jax.numpy as jnp
 import chex
-import jumanji.specs as specs
+from jumanji import specs
 from jumanji.environments.packing.job_shop import JobShop
 from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
 from jumanji.types import TimeStep
@@ -38,20 +38,21 @@ class JobShopWrapper(JumanjiMarlWrapper):
         env: JobShop,
         add_global_state: bool = False,
     ):
-        # Underlying spec is a property, not a method
+        # Underlying environment spec (a property)
         j_spec = env.observation_spec
-        # Number of machines = number of agents
-        self.num_agents = int(j_spec.machines_job_ids.shape[0])
-        # Max episode length
-        self.time_limit = env.time_limit
-        # Flattened feature dim from ops_mask
+        # Number of agents equals number of machines
+        self.num_agents = env.num_machines
+        # Compute per-agent observation feature dimension by flattening ops_mask
         self.obs_feature_dim = int(jnp.prod(j_spec.ops_mask.shape))
+        # Theoretical maximum episode length (upper bound makespan)
+        self.max_episode_steps = (
+            env.num_jobs * env.max_num_ops * env.max_op_duration
+        )
         super().__init__(env, add_global_state)
 
     @cached_property
     def observation_spec(self) -> specs.Spec:
         """Return a Spec for CustomJobShopObservation."""
-        # Use the underlying env's spec property
         jumanji_spec = self._env.observation_spec
         obs_data: Dict[str, specs.Array] = {
             "jumanji_obs": jumanji_spec,
@@ -65,7 +66,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
                 shape=(self.num_agents,),
                 dtype=int,
                 minimum=jnp.zeros(self.num_agents, dtype=int),
-                maximum=jnp.repeat(self.time_limit, self.num_agents),
+                maximum=jnp.repeat(self.max_episode_steps, self.num_agents),
                 name="step_count",
             ),
         }
@@ -77,10 +78,10 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
     @cached_property
     def action_spec(self) -> specs.DiscreteArray:
-        """Each agent (machine) picks one job (or no-op)."""
-        # num_actions can also come from jumanji_spec.action_mask.shape[-1]
+        """Each agent (machine) picks a job id or no-op."""
+        # Action values are in [0, num_jobs] (last index is no-op)
         return specs.DiscreteArray(
-            num_values=self.num_agents + 1,
+            num_values=self._env.num_jobs + 1,
             name="action",
         )
 
@@ -99,15 +100,14 @@ class JobShopWrapper(JumanjiMarlWrapper):
         """
         Convert a single-agent TimeStep into a multi-agent TimeStep.
         """
-        # Build per-agent observation by flattening the ops_mask
+        # Flatten ops_mask into per-agent observation
         flat_obs = ts.observation.ops_mask.reshape(-1)
         agents_view = jnp.repeat(
             jnp.expand_dims(flat_obs, 0), self.num_agents, axis=0
         )
-        # Simple step counter per agent
+        # Simple per-agent step counter
         step_count = jnp.arange(self.num_agents)
 
-        # Wrap into MultiAgent TimeStep
         return TimeStep(
             observation=CustomJobShopObservation(
                 jumanji_obs=ts.observation,
