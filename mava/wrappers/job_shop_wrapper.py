@@ -9,7 +9,7 @@ import math
 
 import jax.numpy as jnp
 import chex
-from jumanji import specs
+import jumanji.specs as specs
 from jumanji.environments.packing.job_shop import JobShop
 from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
 from jumanji.types import TimeStep
@@ -31,24 +31,29 @@ class CustomJobShopObservation(NamedTuple):
 
 class JobShopWrapper(JumanjiMarlWrapper):
     """
-    Multi-agent wrapper around Jumanji's JobShop, splitting
-    the single-agent env into one agent per machine.
+    Multi-agent wrapper around Jumanji's JobShop,
+    splitting the single-agent env into one agent per machine.
     """
     def __init__(
         self,
         env: JobShop,
         add_global_state: bool = False,
     ):
-        # Underlying environment spec (a property)
+        # Underlying environment spec is a property
         j_spec = env.observation_spec
         # Number of agents equals number of machines
-        self.num_agents = env.num_machines
-        # Compute per-agent observation feature dimension by flattening ops_mask
+        num_agents = env.num_machines
+        # Inject into env so JumanjiMarlWrapper can see it
+        env.num_agents = num_agents
+        # Store locally as well
+        self.num_agents = num_agents
+        # Compute per-agent observation feature dimension by flattening ops_mask shape
         self.obs_feature_dim = math.prod(j_spec.ops_mask.shape)
-        # Theoretical maximum episode length (upper bound makespan)
+        # Compute an upper-bound on episode length (makespan)
         self.max_episode_steps = (
             env.num_jobs * env.max_num_ops * env.max_op_duration
         )
+        # Initialize the base wrapper (sets up self._env, self.num_agents, etc.)
         super().__init__(env, add_global_state)
 
     @cached_property
