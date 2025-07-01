@@ -8,11 +8,16 @@ from jumanji.environments.packing.job_shop import JobShop
 from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
 from jumanji.types import TimeStep
 import logging
+from dataclasses import dataclass
 
 from mava.types import Observation
 from mava.wrappers.jumanji import JumanjiMarlWrapper
 
 logging.basicConfig(level=logging.INFO)
+
+@dataclass
+class CustomJobShopObservation(Observation):
+    jumanji_obs: JumanjiObservation
 
 class CustomJobShopObservation(Observation):
     """Custom observation class including full Jumanji observation."""
