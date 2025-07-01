@@ -39,21 +39,19 @@ class JobShopWrapper(JumanjiMarlWrapper):
         env: JobShop,
         add_global_state: bool = False,
     ):
-        # Underlying environment spec is a property
-        j_spec = env.observation_spec
-        # Number of agents equals number of machines
+        # Compute number of agents and maximum episode length
         num_agents = env.num_machines
-        # Inject into env so JumanjiMarlWrapper can see it
+        max_episode_steps = env.num_jobs * env.max_num_ops * env.max_op_duration
+        # Inject into env for base wrapper
         env.num_agents = num_agents
-        # Store locally as well
+        env.time_limit = max_episode_steps
+        # Store locally
         self.num_agents = num_agents
-        # Compute per-agent observation feature dimension by flattening ops_mask shape
+        self.max_episode_steps = max_episode_steps
+        # Compute feature dimension by flattening ops_mask shape
+        j_spec = env.observation_spec
         self.obs_feature_dim = math.prod(j_spec.ops_mask.shape)
-        # Compute an upper-bound on episode length (makespan)
-        self.max_episode_steps = (
-            env.num_jobs * env.max_num_ops * env.max_op_duration
-        )
-        # Initialize the base wrapper (sets up self._env, self.num_agents, etc.)
+        # Initialize the base wrapper (will set self._env, self.time_limit, etc.)
         super().__init__(env, add_global_state)
 
     @cached_property
@@ -85,7 +83,6 @@ class JobShopWrapper(JumanjiMarlWrapper):
     @cached_property
     def action_spec(self) -> specs.DiscreteArray:
         """Each agent (machine) picks a job id or no-op."""
-        # Action values are in [0, num_jobs] (last index is no-op)
         return specs.DiscreteArray(
             num_values=self._env.num_jobs + 1,
             name="action",
