@@ -1,72 +1,121 @@
 from functools import cached_property
-from typing import Any, Dict
+from typing import NamedTuple, Optional, Dict
 
 import jax.numpy as jnp
+import chex
 from jumanji import specs
 from jumanji.env import Environment
 from jumanji.environments.packing.job_shop import JobShop
 from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
 from jumanji.types import TimeStep
 import logging
-from dataclasses import dataclass
 
 from mava.types import Observation
 from mava.wrappers.jumanji import JumanjiMarlWrapper
 
 logging.basicConfig(level=logging.INFO)
 
-@dataclass
-class CustomJobShopObservation(Observation):
-    jumanji_obs: JumanjiObservation
-
-class CustomJobShopObservation(Observation):
-    """Custom observation class including full Jumanji observation."""
-    def __init__(self, jumanji_obs: JumanjiObservation, **kwargs):
-        super().__init__(**kwargs)
-        self.jumanji_obs = jumanji_obs
+class CustomJobShopObservation(NamedTuple):
+    """
+    Carries the original Jumanji JobShop observation plus
+    per-agent views, action mask, and optional step counter.
+    """
+    jumanji_obs: JumanjiObservation                  # full Jumanji observation
+    agents_view: chex.Array                          # shape (num_agents, obs_dim)
+    action_mask: chex.Array                          # shape (num_agents, num_actions)
+    step_count: Optional[chex.Array] = None          # optional per-agent step counter
 
 class JobShopWrapper(JumanjiMarlWrapper):
-    """Multi-agent wrapper for JobShop with custom observation handling."""
-    def __init__(self, env: Environment, add_global_state: bool = False):
-        if not hasattr(env, "num_agents"):
-            env.num_agents = getattr(env, "num_machines", 1)
-        if not hasattr(env, "time_limit"):
-            nj = getattr(env, "num_jobs", 5)
-            mo = getattr(env, "max_num_ops", 4)
-            md = getattr(env, "max_op_duration", 4)
-            env.time_limit = nj * mo * md
-        super().__init__(env, add_global_state)
-        self._env: JobShop
+    """
+    Multi-agent wrapper around Jumanji's JobShop, splitting
+    the single-agent environment into `num_agents` agents.
+    """
 
-    def modify_timestep(self, timestep: TimeStep) -> TimeStep[CustomJobShopObservation]:
-        """Convert Jumanji observation to custom Mava observation."""
-        obs = timestep.observation
-        observation = CustomJobShopObservation(
-            jumanji_obs=obs,
-            agents_view=None,  # Placeholder, not used
-            action_mask=obs.action_mask,
-            step_count=jnp.repeat(obs.step_count, self.num_agents),
-        )
-        reward = jnp.repeat(timestep.reward, self.num_agents)
-        discount = jnp.repeat(timestep.discount, self.num_agents)
-        metrics: Dict[str, Any] = {"env_metrics": {}}
-        return timestep.replace(observation=observation, reward=reward, discount=discount, extras=metrics)
+    def __init__(
+        self,
+        env: JobShop,
+        num_agents: int,
+        add_global_state: bool = False,
+    ):
+        # Store the number of agents and environment time limit
+        self.num_agents = num_agents
+        self.time_limit = env.time_limit
+        # Infer per-agent observation feature dimension from Jumanji spec
+        j_spec = env.observation_spec()
+        # Example: flatten the ops_mask to get feature size
+        self.obs_feature_dim = int(jnp.prod(j_spec.ops_mask.shape))
+        super().__init__(env, add_global_state)
 
     @cached_property
     def observation_spec(self) -> specs.Spec:
-        """Specification of custom environment observations."""
-        jumanji_spec = self._env.observation_spec
-        obs_data = {
+        """Specification of the custom multi-agent observation."""
+        # Grab the original single-agent spec
+        jumanji_spec = self._env.observation_spec()
+
+        # Build a mapping from field name to its Spec
+        obs_data: Dict[str, specs.Array] = {
             "jumanji_obs": jumanji_spec,
-            "agents_view": specs.Array((1,), float, "agents_view"),
+            "agents_view": specs.Array(
+                shape=(self.num_agents, self.obs_feature_dim),
+                dtype=jumanji_spec.dtype,
+                name="agents_view",
+            ),
             "action_mask": jumanji_spec.action_mask,
             "step_count": specs.BoundedArray(
-                (self.num_agents,), int, jnp.zeros(self.num_agents, dtype=int),
-                jnp.repeat(self.time_limit, self.num_agents), "step_count",
+                shape=(self.num_agents,),
+                dtype=int,
+                minimum=jnp.zeros(self.num_agents, dtype=int),
+                maximum=jnp.repeat(self.time_limit, self.num_agents),
+                name="step_count",
             ),
         }
-        return specs.Spec(CustomJobShopObservation, "CustomObservationSpec", **obs_data)
+
+        # Return a Spec whose constructor is our NamedTuple
+        return specs.Spec(
+            constructor=CustomJobShopObservation,
+            name="CustomJobShopObservationSpec",
+            **obs_data,
+        )
 
     @cached_property
     def action_spec(self) -> specs.DiscreteArray:
+        # Each agent has num_agents possible actions
         return specs.DiscreteArray(num_values=self.num_agents, name="action")
+
+    def reset(self, seed: int) -> TimeStep:
+        # Reset the underlying single-agent environment
+        ts: TimeStep = self._env.reset(seed)
+        # Convert to multi-agent TimeStep
+        return self._to_multi_agent_ts(ts)
+
+    def step(self, actions: chex.Array) -> TimeStep:
+        # Here, `actions` is an array of shape (num_agents,)
+        # Flatten back to single-agent action if needed
+        sa_action = int(actions[0])  # or your custom aggregation logic
+        ts = self._env.step(sa_action)
+        return self._to_multi_agent_ts(ts)
+
+    def _to_multi_agent_ts(self, ts: TimeStep) -> TimeStep:
+        """
+        Convert a single-agent TimeStep into a multi-agent one,
+        by wrapping the Jumanji observation and splitting/replicating
+        into per-agent arrays.
+        """
+        # Example: replicate a flattened mask as each agent's view
+        flat_obs = ts.observation.ops_mask.reshape(-1)
+        agents_view = jnp.repeat(
+            jnp.expand_dims(flat_obs, 0), self.num_agents, axis=0
+        )
+        step_count = jnp.arange(self.num_agents)
+
+        return TimeStep(
+            observation=CustomJobShopObservation(
+                jumanji_obs=ts.observation,
+                agents_view=agents_view,
+                action_mask=ts.observation.action_mask,
+                step_count=step_count,
+            ),
+            reward=jnp.repeat(ts.reward, self.num_agents),
+            discount=jnp.repeat(ts.discount, self.num_agents),
+            step_type=jnp.repeat(ts.step_type, self.num_agents),
+        )
