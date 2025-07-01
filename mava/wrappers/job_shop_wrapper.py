@@ -5,6 +5,7 @@ A Mava multi-agent wrapper for Jumanji's JobShop environment.
 """
 from functools import cached_property
 from typing import NamedTuple, Optional, Dict
+import math
 
 import jax.numpy as jnp
 import chex
@@ -43,7 +44,7 @@ class JobShopWrapper(JumanjiMarlWrapper):
         # Number of agents equals number of machines
         self.num_agents = env.num_machines
         # Compute per-agent observation feature dimension by flattening ops_mask
-        self.obs_feature_dim = int(jnp.prod(j_spec.ops_mask.shape))
+        self.obs_feature_dim = math.prod(j_spec.ops_mask.shape)
         # Theoretical maximum episode length (upper bound makespan)
         self.max_episode_steps = (
             env.num_jobs * env.max_num_ops * env.max_op_duration
