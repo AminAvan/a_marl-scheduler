@@ -1,8 +1,7 @@
-# mava/networks/job_shop_network.py
-import chex, jax.numpy as jnp, tensorflow_probability.substrates.jax.distributions as tfd
 from flax import linen as nn
-from mava.types import Observation
+import chex, jax.numpy as jnp, tensorflow_probability.substrates.jax.distributions as tfd
 from mava.networks.heads import DiscreteActionHead
+from mava.types import Observation
 from jumanji.environments.packing.job_shop.types import Observation as JObs
 
 class JobShopEncoder(nn.Module):
@@ -20,7 +19,8 @@ class JobShopActor(nn.Module):
     @nn.compact
     def __call__(self, obs: Observation) -> tfd.Distribution:
         emb = JobShopEncoder()(obs.jumanji_obs)
-        head = DiscreteActionHead(action_dim=int(obs.action_mask.shape[-1]))
+        action_dim = int(obs.action_mask.shape[-1])
+        head = DiscreteActionHead(action_dim=action_dim)
         return head(emb, obs.action_mask)
 
 class JobShopCritic(nn.Module):
