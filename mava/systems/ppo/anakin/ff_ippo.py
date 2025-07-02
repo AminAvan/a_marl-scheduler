@@ -540,4 +540,9 @@ def hydra_entry_point(cfg: DictConfig) -> float:
 
 
 if __name__ == "__main__":
+    # right after you get `cfg` from Hydra
+    print("=== Effective network config ===")
+    print(OmegaConf.to_yaml(cfg.network))
+    print("================================")
+
     hydra_entry_point()
