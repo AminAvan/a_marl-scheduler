@@ -2,7 +2,25 @@ defaults:
   - _self_
 
 actor_network:
+  # exactly as in your default, so we don’t lose any settings
+  pre_torso:
+    _target_: mava.networks.torsos.MLPTorso
+    layer_sizes:
+      - 128
+      - 128
+    use_layer_norm: false
+    activation: relu
+  # now point at your custom Flax module:
   _target_: mava.networks.job_shop_network.JobShopActor
 
 critic_network:
+  # again, mirror the default’s pre_torso
+  pre_torso:
+    _target_: mava.networks.torsos.MLPTorso
+    layer_sizes:
+      - 128
+      - 128
+    use_layer_norm: false
+    activation: relu
+  # and swap in your critic
   _target_: mava.networks.job_shop_network.JobShopCritic
