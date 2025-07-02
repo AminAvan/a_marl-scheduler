@@ -1,8 +1,9 @@
+# mava/configs/network/job_shop_network.yaml
 defaults:
   - _self_
 
-networks:
-  actor:
-    class: mava.networks.job_shop_network.JobShopActor
-  critic:
-    class: mava.networks.job_shop_network.JobShopCritic
+actor_network:
+  _target_: mava.networks.job_shop_network.JobShopActor
+
+critic_network:
+  _target_: mava.networks.job_shop_network.JobShopCritic

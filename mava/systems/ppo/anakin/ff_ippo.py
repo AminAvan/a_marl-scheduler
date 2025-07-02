@@ -529,10 +529,6 @@ def run_experiment(_config: DictConfig) -> float:
     version_base="1.2",
 )
 def hydra_entry_point(cfg: DictConfig) -> float:
-    # right after you get `cfg` from Hydra
-    print("=== Effective network config ===")
-    print(OmegaConf.to_yaml(cfg.network))
-    print("================================")
     """Experiment entry point."""
     # Allow dynamic attributes.
     OmegaConf.set_struct(cfg, False)
