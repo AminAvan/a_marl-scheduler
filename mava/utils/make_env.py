@@ -67,8 +67,6 @@ from mava.wrappers import (
     async_multiagent_worker,
 )
 
-from mava.wrappers.custom_agent_id_wrapper import CustomAgentIDWrapper # add amin
-
 # Registry mapping environment names to their generator and wrapper classes.
 _jumanji_registry = {
     "RobotWarehouse": {"generator": RwareRandomGenerator, "wrapper": RwareWrapper},
@@ -99,39 +97,12 @@ def add_extra_wrappers(
     # Disable the AgentID wrapper if the environment has implicit agent IDs.
     config.system.add_agent_id = config.system.add_agent_id & (~config.env.implicit_agent_id)
 
-    # Apply the appropriate AgentID wrapper based on the environment name
     if config.system.add_agent_id:
-        if config.env.env_name.lower() == "jobshop":
-            train_env = CustomAgentIDWrapper(train_env)
-            eval_env = CustomAgentIDWrapper(eval_env)
-        else:
-            train_env = AgentIDWrapper(train_env)
-            eval_env = AgentIDWrapper(eval_env)
+        train_env = AgentIDWrapper(train_env)
+        eval_env = AgentIDWrapper(eval_env)
 
-    # ─── train: always auto-reset + metrics (applies to all environments)
     train_env = AutoResetWrapper(train_env)
     train_env = RecordEpisodeMetrics(train_env)
-
-    # ─── eval: for JobShop *only*, re-wrap with the JobShopWrapper so
-    # its reset() returns a mava.types.Observation (with .agents_view).
-    if config.env.env_name.lower() == "jobshop":
-        # First apply your JobShopWrapper so that reset() returns (state, TimeStep)
-        from mava.wrappers.job_shop_wrapper import JobShopWrapper
-        eval_env = JobShopWrapper(eval_env, add_global_state=False)
-
-        # Then unwrap the TimeStep, preserving Mava Observation
-        from jumanji.wrappers import Wrapper as _BaseWrapper
-        class _ObsUnwrapper(_BaseWrapper):
-            def reset(self):
-                state, ts = self._env.reset()
-                return state, ts.observation  # Already Mava Observation from JobShopWrapper
-            def step(self, state, action):
-                state, ts = self._env.step(state, action)
-                return state, ts.observation  # Already Mava Observation from JobShopWrapper
-
-        eval_env = _ObsUnwrapper(eval_env)
-
-    # Then record metrics (applies to all environments, including JobShop)
     eval_env = RecordEpisodeMetrics(eval_env)
 
     return train_env, eval_env
@@ -160,8 +131,14 @@ def make_jumanji_env(config: DictConfig, add_global_state: bool = False) -> Tupl
     env_config = {**config.env.kwargs, **config.env.scenario.env_kwargs}
     train_env = jumanji.make(config.env.scenario.name, generator=generator, **env_config)
     eval_env = jumanji.make(config.env.scenario.name, generator=generator, **env_config)
-    train_env = wrapper(train_env, add_global_state=add_global_state)
-    eval_env = wrapper(eval_env, add_global_state=add_global_state)
+    # Wrap both train and eval in JobShopWrapper if it's JobShop, else generic wrapper
+    if config.env.env_name.lower() == "jobshop":
+        from mava.wrappers.job_shop_wrapper import JobShopWrapper
+        train_env = JobShopWrapper(train_env, add_global_state=add_global_state)
+        eval_env = JobShopWrapper(eval_env, add_global_state=add_global_state)
+    else:
+        train_env = wrapper(train_env, add_global_state=add_global_state)
+        eval_env = wrapper(eval_env, add_global_state=add_global_state)
 
     train_env, eval_env = add_extra_wrappers(train_env, eval_env, config)
     return train_env, eval_env
