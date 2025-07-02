@@ -1,4 +1,3 @@
-# mava/configs/network/job_shop_network.yaml
 defaults:
   - _self_
 
