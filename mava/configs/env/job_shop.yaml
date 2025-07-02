@@ -1,7 +1,9 @@
 defaults:
   - _self_
   - scenario: jobshop-test-scenario
-  - /network: job_shop_network    # keep this!
+  - /network: job_shop_network
+  - +network.actor_network._target_: mava.networks.job_shop_network.JobShopActor
+  - +network.critic_network._target_: mava.networks.job_shop_network.JobShopCritic
 
 env_name: JobShop
 eval_metric: episode_return
