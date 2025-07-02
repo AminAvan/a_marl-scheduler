@@ -3,122 +3,75 @@ job_shop_wrapper.py
 
 A Mava multi-agent wrapper for Jumanji's JobShop environment.
 """
-from functools import cached_property
-from typing import NamedTuple, Optional, Dict
 import math
+from functools import cached_property
+from typing import Dict
 
 import jax.numpy as jnp
 import chex
 import jumanji.specs as specs
 from jumanji.environments.packing.job_shop import JobShop
-from jumanji.environments.packing.job_shop.types import Observation as JumanjiObservation
 from jumanji.types import TimeStep
 import logging
 
+from mava.types import Observation  # Mava Observation NamedTuple
 from mava.wrappers.jumanji import JumanjiMarlWrapper
 
 logging.basicConfig(level=logging.INFO)
 
-class CustomJobShopObservation(NamedTuple):
-    """
-    Carries the original Jumanji JobShop observation plus
-    per-agent views, action mask, and optional step counter.
-    """
-    jumanji_obs: JumanjiObservation                  # the raw Jumanji observation
-    agents_view: chex.Array                          # shape (num_agents, obs_dim)
-    action_mask: chex.Array                          # shape (num_agents, num_actions)
-    step_count: Optional[chex.Array] = None          # optional per-agent step counter
-
 class JobShopWrapper(JumanjiMarlWrapper):
     """
     Multi-agent wrapper around Jumanji's JobShop,
-    splitting the single-agent env into one agent per machine.
+    creating one agent per machine.
     """
     def __init__(
         self,
         env: JobShop,
         add_global_state: bool = False,
     ):
-        # Compute number of agents and maximum episode length
+        # Determine number of agents (machines) and episode length
         num_agents = env.num_machines
         max_episode_steps = env.num_jobs * env.max_num_ops * env.max_op_duration
         # Inject into env for base wrapper
         env.num_agents = num_agents
         env.time_limit = max_episode_steps
-        # Store locally
-        self.num_agents = num_agents
-        self.max_episode_steps = max_episode_steps
-        # Compute feature dimension by flattening ops_mask shape
+        # Compute per-agent feature dimension by flattening ops_mask
         j_spec = env.observation_spec
         self.obs_feature_dim = math.prod(j_spec.ops_mask.shape)
-        # Initialize the base wrapper (will set self._env, self.time_limit, etc.)
+        # Initialize base wrapper (sets self._env, self.num_agents, self.time_limit)
         super().__init__(env, add_global_state)
 
-    @cached_property
-    def observation_spec(self) -> specs.Spec:
-        """Return a Spec for CustomJobShopObservation."""
-        jumanji_spec = self._env.observation_spec
-        obs_data: Dict[str, specs.Array] = {
-            "jumanji_obs": jumanji_spec,
-            "agents_view": specs.Array(
-                shape=(self.num_agents, self.obs_feature_dim),
-                dtype=jumanji_spec.dtype,
-                name="agents_view",
-            ),
-            "action_mask": jumanji_spec.action_mask,
-            "step_count": specs.BoundedArray(
-                shape=(self.num_agents,),
-                dtype=int,
-                minimum=jnp.zeros(self.num_agents, dtype=int),
-                maximum=jnp.repeat(self.max_episode_steps, self.num_agents),
-                name="step_count",
-            ),
-        }
-        return specs.Spec(
-            constructor=CustomJobShopObservation,
-            name="CustomJobShopObservationSpec",
-            **obs_data,
-        )
-
-    @cached_property
-    def action_spec(self) -> specs.DiscreteArray:
-        """Each agent (machine) picks a job id or no-op."""
-        return specs.DiscreteArray(
-            num_values=self._env.num_jobs + 1,
-            name="action",
-        )
-
-    def reset(self, seed: int) -> TimeStep:
-        """Reset underlying env and wrap into a multi-agent timestep."""
-        ts = self._env.reset(seed)
-        return self.modify_timestep(ts)
-
-    def step(self, actions: chex.Array) -> TimeStep:
-        """Step underlying env with the first agent's action, then wrap."""
-        sa_action = int(actions[0])
-        ts = self._env.step(sa_action)
-        return self.modify_timestep(ts)
-
-    def modify_timestep(self, ts: TimeStep) -> TimeStep:
+    def modify_timestep(self, timestep: TimeStep) -> TimeStep:
         """
-        Convert a single-agent TimeStep into a multi-agent TimeStep.
+        Convert a single-agent Jumanji timestep into a multi-agent timestep,
+        wrapping the raw Jumanji observation into Mava's Observation.
         """
-        # Flatten ops_mask into per-agent observation
-        flat_obs = ts.observation.ops_mask.reshape(-1)
+        # Flatten the ops_mask into a vector per agent
+        flat_obs = timestep.observation.ops_mask.reshape(-1)
         agents_view = jnp.repeat(
             jnp.expand_dims(flat_obs, 0), self.num_agents, axis=0
         )
-        # Simple per-agent step counter
+        # Step count per agent
         step_count = jnp.arange(self.num_agents)
 
-        return TimeStep(
-            observation=CustomJobShopObservation(
-                jumanji_obs=ts.observation,
-                agents_view=agents_view,
-                action_mask=ts.observation.action_mask,
-                step_count=step_count,
-            ),
-            reward=jnp.repeat(ts.reward, self.num_agents),
-            discount=jnp.repeat(ts.discount, self.num_agents),
-            step_type=jnp.repeat(ts.step_type, self.num_agents),
+        # Build Mava Observation
+        observation = Observation(
+            agents_view=agents_view.astype(float),
+            action_mask=timestep.observation.action_mask,
+            step_count=step_count,
+        )
+
+        # Replicate reward and discount across agents
+        reward = jnp.repeat(timestep.reward, self.num_agents)
+        discount = jnp.repeat(timestep.discount, self.num_agents)
+
+        # Preserve existing extras, if any
+        extras: Dict[str, chex.Array] = timestep.extras if hasattr(timestep, "extras") else {}
+
+        # Return a new TimeStep with Mava Observation
+        return timestep.replace(
+            observation=observation,
+            reward=reward,
+            discount=discount,
+            extras=extras,
         )
