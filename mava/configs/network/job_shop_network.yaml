@@ -1,26 +1,34 @@
-defaults:
-  - _self_
+# ─── Jumanji JobShop Transformer hyperparameters ──────────────────────────────
+# These will be filled in from your scenario/jobshop-test-scenario.yaml
+num_layers_machines:   ${env.scenario.network.num_layers_machines}
+num_layers_operations: ${env.scenario.network.num_layers_operations}
+num_layers_joint_machines_jobs: ${env.scenario.network.num_layers_joint_machines_jobs}
+transformer_num_heads: ${env.scenario.network.transformer_num_heads}
+transformer_key_size:  ${env.scenario.network.transformer_key_size}
+transformer_mlp_units: ${env.scenario.network.transformer_mlp_units}
 
+# ─── Actor network ─────────────────────────────────────────────────────────────
 actor_network:
-  # exactly as in your default, so we don’t lose any settings
+  # Use the same “pre‐torso” to build the joint machine+job embeddings via transformers
   pre_torso:
-    _target_: mava.networks.torsos.MLPTorso
-    layer_sizes:
-      - 128
-      - 128
-    use_layer_norm: false
-    activation: relu
-  # now point at your custom Flax module:
+    _target_: mava.networks.job_shop_network.JobShopTorso
+    num_layers_machines:   ${.num_layers_machines}
+    num_layers_operations: ${.num_layers_operations}
+    num_layers_joint_machines_jobs: ${.num_layers_joint_machines_jobs}
+    transformer_num_heads: ${.transformer_num_heads}
+    transformer_key_size:  ${.transformer_key_size}
+    transformer_mlp_units: ${.transformer_mlp_units}
+  # Finally plug into your custom actor head
   _target_: mava.networks.job_shop_network.JobShopActor
 
+# ─── Critic network ────────────────────────────────────────────────────────────
 critic_network:
-  # again, mirror the default’s pre_torso
   pre_torso:
-    _target_: mava.networks.torsos.MLPTorso
-    layer_sizes:
-      - 128
-      - 128
-    use_layer_norm: false
-    activation: relu
-  # and swap in your critic
+    _target_: mava.networks.job_shop_network.JobShopTorso
+    num_layers_machines:   ${.num_layers_machines}
+    num_layers_operations: ${.num_layers_operations}
+    num_layers_joint_machines_jobs: ${.num_layers_joint_machines_jobs}
+    transformer_num_heads: ${.transformer_num_heads}
+    transformer_key_size:  ${.transformer_key_size}
+    transformer_mlp_units: ${.transformer_mlp_units}
   _target_: mava.networks.job_shop_network.JobShopCritic
