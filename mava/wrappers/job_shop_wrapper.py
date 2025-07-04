@@ -19,6 +19,24 @@ from mava.wrappers.jumanji import JumanjiMarlWrapper
 
 logging.basicConfig(level=logging.INFO)
 
+class MavaObservationSpec(specs.Spec):
+    """Custom spec to generate Mava Observation objects."""
+    def __init__(self, agents_view_shape, action_mask_shape, step_count_shape):
+        self.agents_view_spec = specs.Array(shape=agents_view_shape, dtype=float)
+        self.action_mask_spec = specs.Array(shape=action_mask_shape, dtype=bool)
+        self.step_count_spec = specs.Array(shape=step_count_shape, dtype=int)
+
+    def generate_value(self):
+        return Observation(
+            agents_view=self.agents_view_spec.generate_value(),
+            action_mask=self.action_mask_spec.generate_value(),
+            step_count=self.step_count_spec.generate_value(),
+        )
+
+    def validate(self, value):
+        # Basic validation can be implemented if needed
+        pass
+
 class JobShopWrapper(JumanjiMarlWrapper):
     """
     Multi-agent wrapper around Jumanji's JobShop,
@@ -38,6 +56,8 @@ class JobShopWrapper(JumanjiMarlWrapper):
         # Compute per-agent feature dimension by flattening ops_mask
         j_spec = env.observation_spec
         self.obs_feature_dim = math.prod(j_spec.ops_mask.shape)
+        # Define number of actions per agent (jobs + no-op)
+        self.num_actions = env.num_jobs + 1
         # Initialize base wrapper (sets self._env, self.num_agents, self.time_limit)
         super().__init__(env, add_global_state)
 
@@ -84,4 +104,13 @@ class JobShopWrapper(JumanjiMarlWrapper):
             reward=reward,
             discount=discount,
             extras=extras,
+        )
+
+    @property
+    def observation_spec(self):
+        """Override observation spec to match Mava's Observation structure."""
+        return MavaObservationSpec(
+            agents_view_shape=(self.num_agents, self.obs_feature_dim),
+            action_mask_shape=(self.num_agents, self.num_actions),
+            step_count_shape=(self.num_agents,),
         )
