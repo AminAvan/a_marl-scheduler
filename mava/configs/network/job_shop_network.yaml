@@ -1,34 +1,51 @@
-# ─── Jumanji JobShop Transformer hyperparameters ──────────────────────────────
-# These will be filled in from your scenario/jobshop-test-scenario.yaml
-num_layers_machines:   ${env.scenario.network.num_layers_machines}
-num_layers_operations: ${env.scenario.network.num_layers_operations}
-num_layers_joint_machines_jobs: ${env.scenario.network.num_layers_joint_machines_jobs}
-transformer_num_heads: ${env.scenario.network.transformer_num_heads}
-transformer_key_size:  ${env.scenario.network.transformer_key_size}
-transformer_mlp_units: ${env.scenario.network.transformer_mlp_units}
+# --- Transformer Network for JobShop ---
+n_block: 1  # Number of transformer blocks
+embed_dim: 64  # Embedding dimension for transformer
+n_head: 1  # Number of attention heads
+use_rmsnorm: False  # Use RMSNorm instead of LayerNorm
+use_swiglu: False  # Use SwiGLU instead of standard MLP in feedforward networks
 
-# ─── Actor network ─────────────────────────────────────────────────────────────
+# --- Actor Network Configuration ---
 actor_network:
-  # Use the same “pre‐torso” to build the joint machine+job embeddings via transformers
   pre_torso:
-    _target_: mava.networks.job_shop_network.JobShopTorso
-    num_layers_machines:   ${.num_layers_machines}
-    num_layers_operations: ${.num_layers_operations}
-    num_layers_joint_machines_jobs: ${.num_layers_joint_machines_jobs}
-    transformer_num_heads: ${.transformer_num_heads}
-    transformer_key_size:  ${.transformer_key_size}
-    transformer_mlp_units: ${.transformer_mlp_units}
-  # Finally plug into your custom actor head
-  _target_: mava.networks.job_shop_network.JobShopActor
+    _target_: mava.networks.torsos.TransformerTorso
+    n_block: ${n_block}
+    embed_dim: ${embed_dim}
+    n_head: ${n_head}
+    use_rmsnorm: ${use_rmsnorm}
+    use_swiglu: ${use_swiglu}
+  post_torso:
+    _target_: mava.networks.torsos.MLPTorso
+    layer_sizes: [128]
+    use_layer_norm: False
+    activation: relu
 
-# ─── Critic network ────────────────────────────────────────────────────────────
+# --- Critic Network Configuration ---
 critic_network:
   pre_torso:
-    _target_: mava.networks.job_shop_network.JobShopTorso
-    num_layers_machines:   ${.num_layers_machines}
-    num_layers_operations: ${.num_layers_operations}
-    num_layers_joint_machines_jobs: ${.num_layers_joint_machines_jobs}
-    transformer_num_heads: ${.transformer_num_heads}
-    transformer_key_size:  ${.transformer_key_size}
-    transformer_mlp_units: ${.transformer_mlp_units}
-  _target_: mava.networks.job_shop_network.JobShopCritic
+    _target_: mava.networks.torsos.TransformerTorso
+    n_block: ${n_block}
+    embed_dim: ${embed_dim}
+    n_head: ${n_head}
+    use_rmsnorm: ${use_rmsnorm}
+    use_swiglu: ${use_swiglu}
+  post_torso:
+    _target_: mava.networks.torsos.MLPTorso
+    layer_sizes: [128]
+    use_layer_norm: False
+    activation: relu
+
+# --- Q-Network Configuration (Optional) ---
+q_network:
+  pre_torso:
+    _target_: mava.networks.torsos.TransformerTorso
+    n_block: ${n_block}
+    embed_dim: ${embed_dim}
+    n_head: ${n_head}
+    use_rmsnorm: ${use_rmsnorm}
+    use_swiglu: ${use_swiglu}
+  post_torso:
+    _target_: mava.networks.torsos.MLPTorso
+    layer_sizes: [128]
+    use_layer_norm: False
+    activation: relu
