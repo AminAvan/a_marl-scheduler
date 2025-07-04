@@ -9,11 +9,11 @@ use_swiglu: False  # Use SwiGLU instead of standard MLP in feedforward networks
 actor_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
-    n_block: ${n_block}
-    embed_dim: ${embed_dim}
-    n_head: ${n_head}
-    use_rmsnorm: ${use_rmsnorm}
-    use_swiglu: ${use_swiglu}
+    n_block: ${network.n_block}
+    embed_dim: ${network.embed_dim}
+    n_head: ${network.n_head}
+    use_rmsnorm: ${network.use_rmsnorm}
+    use_swiglu: ${network.use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
     layer_sizes: [128]
@@ -24,11 +24,11 @@ actor_network:
 critic_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
-    n_block: ${n_block}
-    embed_dim: ${embed_dim}
-    n_head: ${n_head}
-    use_rmsnorm: ${use_rmsnorm}
-    use_swiglu: ${use_swiglu}
+    n_block: ${network.n_block}
+    embed_dim: ${network.embed_dim}
+    n_head: ${network.n_head}
+    use_rmsnorm: ${network.use_rmsnorm}
+    use_swiglu: ${network.use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
     layer_sizes: [128]
@@ -39,11 +39,11 @@ critic_network:
 q_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
-    n_block: ${n_block}
-    embed_dim: ${embed_dim}
-    n_head: ${n_head}
-    use_rmsnorm: ${use_rmsnorm}
-    use_swiglu: ${use_swiglu}
+    n_block: ${network.n_block}
+    embed_dim: ${network.embed_dim}
+    n_head: ${network.n_head}
+    use_rmsnorm: ${network.use_rmsnorm}
+    use_swiglu: ${network.use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
     layer_sizes: [128]
