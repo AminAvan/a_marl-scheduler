@@ -1,7 +1,7 @@
 import jax
 import jax.numpy as jnp
 import flax.linen as nn
-import tensorflow_probability.substrates.jax as tfd
+import tensorflow_probability.substrates.jax.distributions as tfd
 from mava.types import Observation
 from jumanji.environments.packing.job_shop.types import Observation as JObs
 
