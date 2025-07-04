@@ -66,10 +66,9 @@ class JobShopWrapper(JumanjiMarlWrapper):
         Reset the environment and ensure the initial timestep is formatted
         as a Mava multi-agent timestep.
         """
-        # Call the underlying environment's reset
-        timestep = self._env.reset(key)
-        # Modify the initial timestep to match Mava's Observation structure
-        return self.modify_timestep(timestep)
+        state, timestep = self._env.reset(key)  # Unpack the tuple
+        modified_timestep = self.modify_timestep(timestep)  # Pass the TimeStep object
+        return state, modified_timestep  # Return tuple as expected
 
     def modify_timestep(self, timestep: TimeStep) -> TimeStep:
         """
