@@ -1,48 +1,48 @@
 # --- Transformer Network for JobShop ---
-num_layers: 1  # Number of transformer layers (was n_block)
+num_layers: 1  # Number of transformer layers
 embed_dim: 64  # Embedding dimension for transformer
-num_heads: 1   # Number of attention heads (was n_head)
+num_heads: 1   # Number of attention heads
 use_swiglu: False  # Use SwiGLU instead of standard MLP in feedforward networks
 
 # --- Actor Network Configuration ---
 actor_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
-    num_layers: ${num_layers}
-    embed_dim: ${embed_dim}
-    num_heads: ${num_heads}
-    input_dim: 128  # Added required parameter (adjust to environment input size)
-    use_swiglu: ${use_swiglu}
+    num_layers: ${network.num_layers}
+    embed_dim: ${network.embed_dim}
+    num_heads: ${network.num_heads}
+    input_dim: 128  # Adjust based on your JobShop environment's input size
+    use_swiglu: ${network.use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
     layer_sizes: [128]
     use_layer_norm: False
     activation: relu
 
-# --- Critic Network Configuration ---
+# --- Critic Network Configuration (if applicable) ---
 critic_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
-    num_layers: ${num_layers}
-    embed_dim: ${embed_dim}
-    num_heads: ${num_heads}
-    input_dim: 128  # Added required parameter (adjust to environment input size)
-    use_swiglu: ${use_swiglu}
+    num_layers: ${network.num_layers}
+    embed_dim: ${network.embed_dim}
+    num_heads: ${network.num_heads}
+    input_dim: 128  # Adjust based on your environment
+    use_swiglu: ${network.use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
     layer_sizes: [128]
     use_layer_norm: False
     activation: relu
 
-# --- Q-Network Configuration (Optional) ---
+# --- Q-Network Configuration (if applicable) ---
 q_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
-    num_layers: ${num_layers}
-    embed_dim: ${embed_dim}
-    num_heads: ${num_heads}
-    input_dim: 128  # Added required parameter (adjust to environment input size)
-    use_swiglu: ${use_swiglu}
+    num_layers: ${network.num_layers}
+    embed_dim: ${network.embed_dim}
+    num_heads: ${network.num_heads}
+    input_dim: 128  # Adjust based on your environment
+    use_swiglu: ${network.use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
     layer_sizes: [128]
