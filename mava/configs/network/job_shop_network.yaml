@@ -1,19 +1,18 @@
 # --- Transformer Network for JobShop ---
-n_block: 1  # Number of transformer blocks
+num_layers: 1  # Number of transformer layers (was n_block)
 embed_dim: 64  # Embedding dimension for transformer
-n_head: 1  # Number of attention heads
-use_rmsnorm: False  # Use RMSNorm instead of LayerNorm
+num_heads: 1   # Number of attention heads (was n_head)
 use_swiglu: False  # Use SwiGLU instead of standard MLP in feedforward networks
 
 # --- Actor Network Configuration ---
 actor_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
-    n_block: ${network.n_block}
-    embed_dim: ${network.embed_dim}
-    n_head: ${network.n_head}
-    use_rmsnorm: ${network.use_rmsnorm}
-    use_swiglu: ${network.use_swiglu}
+    num_layers: ${num_layers}
+    embed_dim: ${embed_dim}
+    num_heads: ${num_heads}
+    input_dim: 128  # Added required parameter (adjust to environment input size)
+    use_swiglu: ${use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
     layer_sizes: [128]
@@ -24,11 +23,11 @@ actor_network:
 critic_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
-    n_block: ${network.n_block}
-    embed_dim: ${network.embed_dim}
-    n_head: ${network.n_head}
-    use_rmsnorm: ${network.use_rmsnorm}
-    use_swiglu: ${network.use_swiglu}
+    num_layers: ${num_layers}
+    embed_dim: ${embed_dim}
+    num_heads: ${num_heads}
+    input_dim: 128  # Added required parameter (adjust to environment input size)
+    use_swiglu: ${use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
     layer_sizes: [128]
@@ -39,11 +38,11 @@ critic_network:
 q_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
-    n_block: ${network.n_block}
-    embed_dim: ${network.embed_dim}
-    n_head: ${network.n_head}
-    use_rmsnorm: ${network.use_rmsnorm}
-    use_swiglu: ${network.use_swiglu}
+    num_layers: ${num_layers}
+    embed_dim: ${embed_dim}
+    num_heads: ${num_heads}
+    input_dim: 128  # Added required parameter (adjust to environment input size)
+    use_swiglu: ${use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
     layer_sizes: [128]
