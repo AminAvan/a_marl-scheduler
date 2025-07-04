@@ -41,6 +41,16 @@ class JobShopWrapper(JumanjiMarlWrapper):
         # Initialize base wrapper (sets self._env, self.num_agents, self.time_limit)
         super().__init__(env, add_global_state)
 
+    def reset(self, key) -> TimeStep:
+        """
+        Reset the environment and ensure the initial timestep is formatted
+        as a Mava multi-agent timestep.
+        """
+        # Call the underlying environment's reset
+        timestep = self._env.reset(key)
+        # Modify the initial timestep to match Mava's Observation structure
+        return self.modify_timestep(timestep)
+
     def modify_timestep(self, timestep: TimeStep) -> TimeStep:
         """
         Convert a single-agent Jumanji timestep into a multi-agent timestep,
