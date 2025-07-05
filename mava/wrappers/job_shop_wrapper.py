@@ -19,8 +19,10 @@ from mava.wrappers.jumanji import JumanjiMarlWrapper
 
 logging.basicConfig(level=logging.INFO)
 
+
 class MavaObservationSpec(specs.Spec):
     """Custom spec to generate Mava Observation objects."""
+
     def __init__(self, agents_view_shape, action_mask_shape, step_count_shape):
         self.agents_view_spec = specs.Array(shape=agents_view_shape, dtype=float)
         self.action_mask_spec = specs.Array(shape=action_mask_shape, dtype=bool)
@@ -37,15 +39,17 @@ class MavaObservationSpec(specs.Spec):
         # Basic validation can be implemented if needed
         pass
 
+
 class JobShopWrapper(JumanjiMarlWrapper):
     """
     Multi-agent wrapper around Jumanji's JobShop,
     creating one agent per machine.
     """
+
     def __init__(
-        self,
-        env: JobShop,
-        add_global_state: bool = False,
+            self,
+            env: JobShop,
+            add_global_state: bool = False,
     ):
         # Determine number of agents (machines) and episode length
         num_agents = env.num_machines
@@ -72,27 +76,50 @@ class JobShopWrapper(JumanjiMarlWrapper):
 
     def modify_timestep(self, timestep: TimeStep) -> TimeStep:
         """
-        Convert a single-agent Jumanji timestep into a multi-agent timestep,
+        Convert a batched single-agent Jumanji timestep into a batched multi-agent timestep,
         wrapping the raw Jumanji observation into Mava's Observation.
         """
-        # Flatten the ops_mask into a vector per agent
-        flat_obs = timestep.observation.ops_mask.reshape(-1)
+        batch_size = timestep.observation.ops_mask.shape[0]
+
+        # Flatten ops_mask for each batch
+        feature_dim = math.prod(timestep.observation.ops_mask.shape[1:])
+        flat_obs = timestep.observation.ops_mask.reshape(batch_size, feature_dim)
+
+        # Repeat the flattened observation for each agent
         agents_view = jnp.repeat(
-            jnp.expand_dims(flat_obs, 0), self.num_agents, axis=0
+            flat_obs[:, None, :], self.num_agents, axis=1
+        )  # (batch_size, num_agents, feature_dim)
+
+        # Create step_count: (batch_size, num_agents)
+        step_count = jnp.tile(
+            jnp.arange(self.num_agents)[None, :], (batch_size, 1)
         )
-        # Step count per agent
-        step_count = jnp.arange(self.num_agents)
+
+        # Handle action_mask shape
+        action_mask = timestep.observation.action_mask
+        expected_shape = (batch_size, self.num_agents, self.num_actions)
+        if action_mask.shape == expected_shape:
+            # Shape is already correct: (batch_size, num_agents, num_actions)
+            pass
+        elif action_mask.shape == (batch_size, self.num_actions):
+            # Expand from (batch_size, num_actions) to (batch_size, num_agents, num_actions)
+            action_mask = jnp.repeat(action_mask[:, None, :], self.num_agents, axis=1)
+        else:
+            raise ValueError(
+                f"Unexpected action_mask shape: {action_mask.shape}, "
+                f"expected {expected_shape} or {(batch_size, self.num_actions)}"
+            )
 
         # Build Mava Observation
         observation = Observation(
             agents_view=agents_view.astype(float),
-            action_mask=timestep.observation.action_mask,
+            action_mask=action_mask,
             step_count=step_count,
         )
 
         # Replicate reward and discount across agents
-        reward = jnp.repeat(timestep.reward, self.num_agents)
-        discount = jnp.repeat(timestep.discount, self.num_agents)
+        reward = jnp.repeat(timestep.reward[:, None], self.num_agents, axis=1)  # (batch_size, num_agents)
+        discount = jnp.repeat(timestep.discount[:, None], self.num_agents, axis=1)  # (batch_size, num_agents)
 
         # Preserve existing extras, if any
         extras: Dict[str, chex.Array] = timestep.extras if hasattr(timestep, "extras") else {}
