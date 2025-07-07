@@ -1,91 +1,115 @@
-import jax
+"""
+job_shop_wrapper.py
+
+A Mava multi-agent wrapper for Jumanji's JobShop environment.
+"""
+import math
+from functools import cached_property
+from typing import Dict
+
 import jax.numpy as jnp
-import flax.linen as nn
-import tensorflow_probability.substrates.jax.distributions as tfd
-from mava.types import Observation
-from jumanji.environments.packing.job_shop.types import Observation as JObs
+import chex
+import jumanji.specs as specs
+from jumanji.environments.packing.job_shop import JobShop
+from jumanji.types import TimeStep
+import logging
 
-class JobShopEncoder(nn.Module):
-    num_jobs: int
-    max_num_ops: int
-    num_machines: int
-    embedding_dim: int = 64
+from mava.types import Observation  # Mava Observation NamedTuple
+from mava.wrappers.jumanji import JumanjiMarlWrapper
 
-    @nn.compact
-    def __call__(self, j_obs: JObs) -> jnp.ndarray:
-        # Operation Encoder: Process ops_machine_ids, ops_durations, and ops_mask
-        ops_machine_emb = nn.Embed(
-            num_embeddings=self.num_machines,
-            features=self.embedding_dim
-        )(j_obs.ops_machine_ids)
-        ops_duration_emb = nn.Dense(self.embedding_dim)(
-            j_obs.ops_durations[..., None]
+logging.basicConfig(level=logging.INFO)
+
+class MavaObservationSpec(specs.Spec):
+    """Custom spec to generate Mava Observation objects."""
+    def __init__(self, agents_view_shape, action_mask_shape, step_count_shape):
+        self.agents_view_spec = specs.Array(shape=agents_view_shape, dtype=float)
+        self.action_mask_spec = specs.Array(shape=action_mask_shape, dtype=bool)
+        self.step_count_spec = specs.Array(shape=step_count_shape, dtype=int)
+
+    def generate_value(self):
+        return Observation(
+            agents_view=self.agents_view_spec.generate_value(),
+            action_mask=self.action_mask_spec.generate_value(),
+            step_count=self.step_count_spec.generate_value(),
         )
-        ops_emb = ops_machine_emb + ops_duration_emb  # (num_jobs, max_num_ops, embedding_dim)
-        ops_emb = ops_emb * j_obs.ops_mask[..., None]  # mask invalid ops
-        job_emb = (
-            jnp.sum(ops_emb, axis=1)
-            / jnp.sum(j_obs.ops_mask, axis=1, keepdims=True)
-        )  # average pooling per job
 
-        # Machine Encoder: Process machines_job_ids and machines_remaining_times
-        machines_job_emb = nn.Embed(
-            num_embeddings=self.num_jobs + 1,
-            features=self.embedding_dim
-        )(j_obs.machines_job_ids)
-        machines_time_emb = nn.Dense(self.embedding_dim)(
-            j_obs.machines_remaining_times[..., None]
+    def validate(self, value):
+        # Basic validation can be implemented if needed
+        pass
+
+class JobShopWrapper(JumanjiMarlWrapper):
+    """
+    Multi-agent wrapper around Jumanji's JobShop,
+    creating one agent per machine.
+    """
+    def __init__(
+        self,
+        env: JobShop,
+        add_global_state: bool = False,
+    ):
+        # Determine number of agents (machines) and episode length
+        num_agents = env.num_machines
+        max_episode_steps = env.num_jobs * env.max_num_ops * env.max_op_duration
+        # Inject into env for base wrapper
+        env.num_agents = num_agents
+        env.time_limit = max_episode_steps
+        # Compute per-agent feature dimension by flattening ops_mask
+        j_spec = env.observation_spec
+        self.obs_feature_dim = math.prod(j_spec.ops_mask.shape)
+        # Define number of actions per agent (jobs + no-op)
+        self.num_actions = env.num_jobs + 1
+        # Initialize base wrapper (sets self._env, self.num_agents, self.time_limit)
+        super().__init__(env, add_global_state)
+
+    def reset(self, key) -> TimeStep:
+        """
+        Reset the environment and ensure the initial timestep is formatted
+        as a Mava multi-agent timestep.
+        """
+        state, timestep = self._env.reset(key)  # Unpack the tuple
+        modified_timestep = self.modify_timestep(timestep)  # Pass the TimeStep object
+        return state, modified_timestep  # Return tuple as expected
+
+    def modify_timestep(self, timestep: TimeStep) -> TimeStep:
+        """
+        Convert a single-agent Jumanji timestep into a multi-agent timestep,
+        wrapping the raw Jumanji observation into Mava's Observation.
+        """
+        # Flatten the ops_mask into a vector per agent
+        flat_obs = timestep.observation.ops_mask.reshape(-1)
+        agents_view = jnp.repeat(
+            jnp.expand_dims(flat_obs, 0), self.num_agents, axis=0
         )
-        machine_emb = machines_job_emb + machines_time_emb  # (num_machines, embedding_dim)
-        machine_emb = jnp.mean(machine_emb, axis=0)  # global avg pooling over machines
+        # Step count per agent
+        step_count = jnp.arange(self.num_agents)
 
-        # Combine job and machine embeddings
-        combined_emb = jnp.concatenate(
-            [job_emb.flatten(), machine_emb[None, :]], axis=-1
+        # Build Mava Observation
+        observation = Observation(
+            agents_view=agents_view.astype(float),
+            action_mask=timestep.observation.action_mask,
+            step_count=step_count,
         )
-        agents_view = nn.Dense(128)(combined_emb)  # project to fixed-size vector
-        return agents_view[None, :]  # shape: (1, 128)
 
-class JobShopActor(nn.Module):
-    num_actions: int  # num_machines * (num_jobs + 1)
+        # Replicate reward and discount across agents
+        reward = jnp.repeat(timestep.reward, self.num_agents)
+        discount = jnp.repeat(timestep.discount, self.num_agents)
 
-    @nn.compact
-    def __call__(self, obs: Observation) -> tfd.Distribution:
-        # agents_view may be (batch, feat) or (batch, agents, feat)
-        emb = obs.agents_view
-        mask = obs.action_mask  # may be (batch, actions) or (batch, agents, actions)
-        # Align embedding dims to mask dims
-        if emb.ndim + 1 == mask.ndim:
-            emb = jnp.expand_dims(emb, axis=-2)
-            emb = jnp.repeat(emb, repeats=mask.shape[-2], axis=-2)
-        # Compute logits and mask invalid actions
-        logits = nn.Dense(self.num_actions)(emb)
-        masked_logits = jnp.where(mask, logits, jnp.finfo(jnp.float32).min)
-        return tfd.Categorical(logits=masked_logits)
+        # Preserve existing extras, if any
+        extras: Dict[str, chex.Array] = timestep.extras if hasattr(timestep, "extras") else {}
 
-class JobShopCritic(nn.Module):
-    @nn.compact
-    def __call__(self, obs: Observation) -> jnp.ndarray:
-        # Produce a scalar (batch, agents) or (batch,) value
-        emb = obs.agents_view
-        value = nn.Dense(1)(emb)
-        return jnp.squeeze(value, axis=-1)
+        # Return a new TimeStep with Mava Observation
+        return timestep.replace(
+            observation=observation,
+            reward=reward,
+            discount=discount,
+            extras=extras,
+        )
 
-# Helpers if used outside Hydra
-
-def create_networks(num_jobs: int, max_num_ops: int, num_machines: int):
-    encoder = JobShopEncoder(
-        num_jobs=num_jobs,
-        max_num_ops=max_num_ops,
-        num_machines=num_machines
-    )
-    num_actions = num_machines * (num_jobs + 1)
-    actor = JobShopActor(num_actions=num_actions)
-    critic = JobShopCritic()
-    return encoder, actor, critic
-
-
-def process_observation(j_obs: JObs, encoder: JobShopEncoder) -> Observation:
-    agents_view = encoder(j_obs)  # (1, 128)
-    action_mask = jnp.reshape(j_obs.action_mask, (1, -1))
-    return Observation(agents_view=agents_view, action_mask=action_mask)
+    @property
+    def observation_spec(self):
+        """Override observation spec to match Mava's Observation structure."""
+        return MavaObservationSpec(
+            agents_view_shape=(self.num_agents, self.obs_feature_dim),
+            action_mask_shape=(self.num_agents, self.num_actions),
+            step_count_shape=(self.num_agents,),
+        )
