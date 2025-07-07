@@ -51,16 +51,28 @@ class JobShopActor(nn.Module):
 
     @nn.compact
     def __call__(self, obs: Observation) -> tfd.Distribution:
-        # agents_view may be (batch, feat) or (batch, agents, feat)
-        emb = obs.agents_view
-        mask = obs.action_mask  # may be (batch, actions) or (batch, agents, actions)
-        # Align embedding dims to mask dims
-        if emb.ndim + 1 == mask.ndim:
-            emb = jnp.expand_dims(emb, axis=-2)
-            emb = jnp.repeat(emb, repeats=mask.shape[-2], axis=-2)
-        # Compute logits and mask invalid actions
-        logits = nn.Dense(self.num_actions)(emb)
-        masked_logits = jnp.where(mask, logits, jnp.finfo(jnp.float32).min)
+        emb  = obs.agents_view                        # (B, M, feat)  or (B, feat)
+        mask = obs.action_mask                        # (B, M, A)
+
+        # --- align embedding dims to mask dims (you already have this) ---
+        if emb.ndim + 1 == mask.ndim:                 # emb=(B,feat), mask=(B,M,A)
+            emb = jnp.expand_dims(emb, -2)            # → (B,1,feat)
+            emb = jnp.repeat(emb, mask.shape[-2], -2) # → (B,M,feat)
+
+        # --- logits ------------------------------------------------------
+        logits = nn.Dense(self.num_actions)(emb)      # (B,M,A)  *or* (B,A)
+
+        # >>> new part: align logits to mask if needed  <<<
+        if logits.ndim + 1 == mask.ndim:              # logits=(B,A), mask=(B,M,A)
+            logits = jnp.expand_dims(logits, -2)      # → (B,1,A)
+            logits = jnp.repeat(logits, mask.shape[-2], -2)  # → (B,M,A)
+
+        # --- mask invalid actions ---------------------------------------
+        masked_logits = jnp.where(
+            mask,
+            logits,
+            jnp.finfo(jnp.float32).min,
+        )
         return tfd.Categorical(logits=masked_logits)
 
 class JobShopCritic(nn.Module):
