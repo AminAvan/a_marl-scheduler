@@ -24,4 +24,4 @@ from mava.networks.base import (
 )
 from mava.networks.sable_network import SableNetwork
 
-from mava.networks.job_shop_network import JobShopActor, JobShopCritic ## add amin
+# from mava.networks.job_shop_network import JobShopActor, JobShopCritic ## add amin
