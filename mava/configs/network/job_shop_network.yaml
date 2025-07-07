@@ -1,52 +1,19 @@
-# JobShop environment configuration
-env_name: "JobShop"
-eval_metric: "episode_return"
-implicit_agent_id: true
-log_win_rate: true
+# mava/configs/network/job_shop_network.yaml
+_name_: job_shop_network
+defaults:
+  - _self_
 
-# Wrapper configuration
-wrapper:
-  - _target_: mava.wrappers.job_shop_wrapper.JobShopMultiAgentWrapper
-    num_agents: ${system.num_agents}
+# JobShop specific parameters
+num_actions: ${eval:'${env.scenario.task_config.num_machines} * (${env.scenario.task_config.num_jobs} + 1)'}  # 4 * (5 + 1) = 24
 
-# JobShop specific configuration
-scenario:
-  name: "JobShop-v0"
-  task_name: "jobshop-test-scenario"
-  task_config:
-    num_jobs: 5
-    num_machines: 4
-    max_num_ops: 4
-    max_op_duration: 4
-  env_kwargs: {}
+# --- Actor network ------------------------------------------------------------
+actor_network:
+  _target_: mava.networks.job_shop_network.JobShopActor
+  num_actions: ${network.num_actions}
 
-# Network configuration specific to JobShop
-network:
-  num_layers_machines: 1
-  num_layers_operations: 1
-  num_layers_joint_machines_jobs: 2
-  transformer_num_heads: 8
-  transformer_key_size: 16
-  transformer_mlp_units: [512]
+# --- Critic network -----------------------------------------------------------
+critic_network:
+  _target_: mava.networks.job_shop_network.JobShopCritic
 
-# Training configuration
-training:
-  num_epochs: 65
-  num_learner_steps_per_epoch: 200
-  n_steps: 10
-  total_batch_size: 128
-
-# Evaluation configuration
-evaluation:
-  eval_total_batch_size: 512
-  greedy_eval_total_batch_size: 512
-
-# A2C specific parameters
-a2c:
-  normalize_advantage: false
-  discount_factor: 0.99
-  bootstrapping_factor: 0.95
-  l_pg: 1.0
-  l_td: 1.0
-  l_en: 0.5
-  learning_rate: 0.0001
+# --- For compatibility with existing Mava code --------------------------------
+action_dim: ${network.num_actions}
