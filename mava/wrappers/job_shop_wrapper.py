@@ -107,8 +107,17 @@ class JobShopWrapper(JumanjiMarlWrapper):
         if jnp.ndim(discount) == 0 or discount.shape == ():
             discount = jnp.full((self.num_agents,), discount)
 
-        # Preserve extras and add original observation
+        # Handle extras - ensure all required keys are present
         extras = dict(timestep.extras) if hasattr(timestep, "extras") and timestep.extras else {}
+
+        # Ensure both episode_metrics and env_metrics exist (required by ff_ippo.py line 99)
+        if "episode_metrics" not in extras:
+            extras["episode_metrics"] = {}
+
+        if "env_metrics" not in extras:
+            extras["env_metrics"] = {}
+
+        # Store original JobShop observation for debugging
         extras["jobshop_observation"] = obs
 
         # Create new timestep
