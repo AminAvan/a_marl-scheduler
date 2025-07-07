@@ -63,13 +63,6 @@ class JobShopWrapper(JumanjiMarlWrapper):
         )
         self._encoder_params = None
 
-        print(f"JobShop environment created with:")
-        print(f"  num_jobs: {self.num_jobs}")
-        print(f"  num_machines: {self.num_machines}")
-        print(f"  max_num_ops: {self.max_num_ops}")
-        print(f"  num_agents: {self.num_agents}")
-        print(f"  num_actions: {self.num_actions}")
-
     def _init_encoder_params(self, dummy_obs):
         """Initialize encoder parameters if not already done."""
         if self._encoder_params is None:
@@ -230,9 +223,21 @@ class JobShopWrapper(JumanjiMarlWrapper):
     @cached_property
     def action_spec(self):
         """Override action spec for multi-agent."""
-        # Return DiscreteArray spec for multi-agent actions
-        return specs.DiscreteArray(
-            num_values=self.num_actions,
-            shape=(self.num_agents,),
-            dtype=jnp.int32
-        )
+        # Get the base action spec from the original environment
+        base_spec = self._env.action_spec
+
+        # For JobShop, we expect DiscreteArray
+        if hasattr(base_spec, 'num_values'):
+            # Return DiscreteArray spec for multi-agent actions
+            return specs.DiscreteArray(
+                num_values=base_spec.num_values,
+                shape=(self.num_agents,),
+                dtype=base_spec.dtype
+            )
+        else:
+            # Fallback: create a new spec
+            return specs.DiscreteArray(
+                num_values=self.num_actions,
+                shape=(self.num_agents,),
+                dtype=jnp.int32
+            )
