@@ -16,50 +16,56 @@ class JobShopEncoder(nn.Module):
         # Operation Encoder: Process ops_machine_ids, ops_durations, and ops_mask
         ops_machine_emb = nn.Embed(num_embeddings=self.num_machines, features=self.embedding_dim)(j_obs.ops_machine_ids)
         ops_duration_emb = nn.Dense(self.embedding_dim)(j_obs.ops_durations[..., None])
-        ops_emb = ops_machine_emb + ops_duration_emb  # Shape: (num_jobs, max_num_ops, embedding_dim)
-        ops_emb = ops_emb * j_obs.ops_mask[..., None]  # Mask invalid operations
-        job_emb = jnp.sum(ops_emb, axis=1) / jnp.sum(j_obs.ops_mask, axis=1, keepdims=True)  # Average pooling per job
+        ops_emb = ops_machine_emb + ops_duration_emb  # (num_jobs, max_num_ops, embedding_dim)
+        ops_emb = ops_emb * j_obs.ops_mask[..., None]  # mask invalid ops
+        job_emb = jnp.sum(ops_emb, axis=1) / jnp.sum(j_obs.ops_mask, axis=1, keepdims=True)  # average pooling
 
         # Machine Encoder: Process machines_job_ids and machines_remaining_times
         machines_job_emb = nn.Embed(num_embeddings=self.num_jobs + 1, features=self.embedding_dim)(j_obs.machines_job_ids)
         machines_time_emb = nn.Dense(self.embedding_dim)(j_obs.machines_remaining_times[..., None])
-        machine_emb = machines_job_emb + machines_time_emb  # Shape: (num_machines, embedding_dim)
-        machine_emb = jnp.mean(machine_emb, axis=0)  # Global average pooling across machines
+        machine_emb = machines_job_emb + machines_time_emb  # (num_machines, embedding_dim)
+        machine_emb = jnp.mean(machine_emb, axis=0)  # global average pooling across machines
 
         # Combine job and machine embeddings
         combined_emb = jnp.concatenate([job_emb.flatten(), machine_emb[None, :]], axis=-1)
-        agents_view = nn.Dense(128)(combined_emb)  # Project to a fixed-size feature vector
-        return agents_view[None, :]  # Shape: (1, 128) for single agent
+        agents_view = nn.Dense(128)(combined_emb)  # project to fixed-size vector
+        return agents_view[None, :]  # shape: (1, 128)
 
 class JobShopActor(nn.Module):
-    num_actions: int  # Flattened action space: num_machines * (num_jobs + 1)
+    num_actions: int  # num_machines * (num_jobs + 1)
 
     @nn.compact
     def __call__(self, obs: Observation) -> tfd.Distribution:
-        agents_view = obs.agents_view  # Shape: (1, num_obs_features)
-        action_mask = obs.action_mask  # Shape: (1, num_actions)
-        logits = nn.Dense(self.num_actions)(agents_view)
-        masked_logits = jnp.where(action_mask, logits, -1e9)  # Mask invalid actions
+        # agents_view may be (batch, feat) or (batch, agents, feat)
+        emb = obs.agents_view
+        mask = obs.action_mask  # may be (batch, actions) or (batch, agents, actions)
+        # Align embedding dims to mask dims
+        if emb.ndim + 1 == mask.ndim:
+            emb = jnp.expand_dims(emb, axis=-2)
+            emb = jnp.repeat(emb, repeats=mask.shape[-2], axis=-2)
+        # Compute logits and mask invalid actions
+        logits = nn.Dense(self.num_actions)(emb)
+        masked_logits = jnp.where(mask, logits, jnp.finfo(jnp.float32).min)
         return tfd.Categorical(logits=masked_logits)
 
 class JobShopCritic(nn.Module):
     @nn.compact
     def __call__(self, obs: Observation) -> jnp.ndarray:
-        agents_view = obs.agents_view  # Shape: (1, num_obs_features)
-        value = nn.Dense(1)(agents_view)
-        return jnp.squeeze(value, -1)  # Scalar value
+        # value per agent or per batch
+        emb = obs.agents_view
+        value = nn.Dense(1)(emb)
+        return jnp.squeeze(value, axis=-1)
 
+# Helper to create networks outside Hydra if needed
 def create_networks(num_jobs: int, max_num_ops: int, num_machines: int):
-    """Creates the encoder, actor, and critic networks for JobShop in Mava."""
     encoder = JobShopEncoder(num_jobs=num_jobs, max_num_ops=max_num_ops, num_machines=num_machines)
-    num_actions = num_machines * (num_jobs + 1)  # Flattened action space
+    num_actions = num_machines * (num_jobs + 1)
     actor = JobShopActor(num_actions=num_actions)
     critic = JobShopCritic()
     return encoder, actor, critic
 
-# Example usage within Mava
+# Wrap raw Jumanji obs into Mava Observation
 def process_observation(j_obs: JObs, encoder: JobShopEncoder) -> Observation:
-    """Wraps JobShop observation into Mava's Observation format."""
-    agents_view = encoder(j_obs)  # Shape: (1, 128)
-    action_mask = jnp.reshape(j_obs.action_mask, (1, -1))  # Flatten to (1, num_machines * (num_jobs + 1))
+    agents_view = encoder(j_obs)  # (1, 128)
+    action_mask = jnp.reshape(j_obs.action_mask, (1, -1))
     return Observation(agents_view=agents_view, action_mask=action_mask)
