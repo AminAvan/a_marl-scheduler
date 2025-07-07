@@ -1,4 +1,5 @@
 # mava/configs/network/job_shop_network.yaml
+_name_: job_shop_network
 # ───────────────────────────────────────────────────────────────────────────────
 # --- Transformer Network for JobShop ------------------------------------------
 num_layers: 1
