@@ -1,103 +1,123 @@
 import jax
 import jax.numpy as jnp
-import flax.linen as nn
-import tensorflow_probability.substrates.jax.distributions as tfd
-from mava.types import Observation
-from jumanji.environments.packing.job_shop.types import Observation as JObs
+import haiku as hk
+from typing import Sequence, Optional
+from mava.networks.base import BaseNetwork
+from mava.networks.heads import CategoricalActionHead
+from mava.networks.torsos import MLPTorso, TransformerTorso
 
-class JobShopEncoder(nn.Module):
-    num_jobs: int
-    max_num_ops: int
-    num_machines: int
-    embedding_dim: int = 64
 
-    @nn.compact
-    def __call__(self, j_obs: JObs) -> jnp.ndarray:
-        # Operation Encoder: Process ops_machine_ids, ops_durations, and ops_mask
-        ops_machine_emb = nn.Embed(
-            num_embeddings=self.num_machines,
-            features=self.embedding_dim
-        )(j_obs.ops_machine_ids)
-        ops_duration_emb = nn.Dense(self.embedding_dim)(
-            j_obs.ops_durations[..., None]
-        )
-        ops_emb = ops_machine_emb + ops_duration_emb  # (num_jobs, max_num_ops, embedding_dim)
-        ops_emb = ops_emb * j_obs.ops_mask[..., None]  # mask invalid ops
-        job_emb = (
-            jnp.sum(ops_emb, axis=1)
-            / jnp.sum(j_obs.ops_mask, axis=1, keepdims=True)
-        )  # average pooling per job
+class JobShopEncoder(hk.Module):
+    """Custom encoder for JobShop observations."""
 
-        # Machine Encoder: Process machines_job_ids and machines_remaining_times
-        machines_job_emb = nn.Embed(
-            num_embeddings=self.num_jobs + 1,
-            features=self.embedding_dim
-        )(j_obs.machines_job_ids)
-        machines_time_emb = nn.Dense(self.embedding_dim)(
-            j_obs.machines_remaining_times[..., None]
-        )
-        machine_emb = machines_job_emb + machines_time_emb  # (num_machines, embedding_dim)
-        machine_emb = jnp.mean(machine_emb, axis=0)  # global avg pooling over machines
+    def __init__(
+            self,
+            output_dim: int = 128,
+            num_layers: int = 2,
+            layer_sizes: Optional[Sequence[int]] = None,
+            name: Optional[str] = None,
+    ):
+        super().__init__(name=name)
+        self.output_dim = output_dim
+        self.num_layers = num_layers
+        self.layer_sizes = layer_sizes or [256, 256]
 
-        # Combine job and machine embeddings
-        combined_emb = jnp.concatenate(
-            [job_emb.flatten(), machine_emb[None, :]], axis=-1
-        )
-        agents_view = nn.Dense(128)(combined_emb)  # project to fixed-size vector
-        return agents_view[None, :]  # shape: (1, 128)
+    def __call__(self, observation):
+        """Encode JobShop observation into a fixed-size representation."""
+        # Instead of using agents_view, we'll process the raw JobShop observation
+        # Check if we have agents_view (from wrapper) or raw JobShop observation
+        if hasattr(observation, 'agents_view'):
+            # If wrapped, use agents_view
+            x = observation.agents_view
+        else:
+            # Otherwise, manually concatenate JobShop features
+            features = []
 
-class JobShopActor(nn.Module):
-    num_actions: int  # num_machines * (num_jobs + 1)
+            # Flatten and concatenate all observation components
+            if hasattr(observation, 'ops_machine_ids'):
+                features.append(observation.ops_machine_ids.reshape(*observation.ops_machine_ids.shape[:-2], -1))
+            if hasattr(observation, 'ops_durations'):
+                features.append(observation.ops_durations.reshape(*observation.ops_durations.shape[:-2], -1))
+            if hasattr(observation, 'ops_mask'):
+                features.append(observation.ops_mask.reshape(*observation.ops_mask.shape[:-2], -1))
+            if hasattr(observation, 'machines_job_ids'):
+                features.append(observation.machines_job_ids)
+            if hasattr(observation, 'machines_remaining_times'):
+                features.append(observation.machines_remaining_times)
 
-    @nn.compact
-    def __call__(self, obs: Observation) -> tfd.Distribution:
-        emb  = obs.agents_view                        # (B, M, feat)  or (B, feat)
-        mask = obs.action_mask                        # (B, M, A)
+            if features:
+                x = jnp.concatenate(features, axis=-1)
+            else:
+                raise ValueError("No recognized JobShop observation attributes found")
 
-        # --- align embedding dims to mask dims (you already have this) ---
-        if emb.ndim + 1 == mask.ndim:                 # emb=(B,feat), mask=(B,M,A)
-            emb = jnp.expand_dims(emb, -2)            # → (B,1,feat)
-            emb = jnp.repeat(emb, mask.shape[-2], -2) # → (B,M,feat)
+        # Pass through MLP layers
+        for i, layer_size in enumerate(self.layer_sizes):
+            x = hk.Linear(layer_size)(x)
+            x = jax.nn.relu(x)
 
-        # --- logits ------------------------------------------------------
-        logits = nn.Dense(self.num_actions)(emb)      # (B,M,A)  *or* (B,A)
+        # Final projection to output dimension
+        x = hk.Linear(self.output_dim)(x)
 
-        # >>> new part: align logits to mask if needed  <<<
-        if logits.ndim + 1 == mask.ndim:              # logits=(B,A), mask=(B,M,A)
-            logits = jnp.expand_dims(logits, -2)      # → (B,1,A)
-            logits = jnp.repeat(logits, mask.shape[-2], -2)  # → (B,M,A)
+        return x
 
-        # --- mask invalid actions ---------------------------------------
-        masked_logits = jnp.where(
-            mask,
-            logits,
-            jnp.finfo(jnp.float32).min,
-        )
-        return tfd.Categorical(logits=masked_logits)
 
-class JobShopCritic(nn.Module):
-    @nn.compact
-    def __call__(self, obs: Observation) -> jnp.ndarray:
-        # Produce a scalar (batch, agents) or (batch,) value
-        emb = obs.agents_view
-        value = nn.Dense(1)(emb)
+class JobShopActor(BaseNetwork):
+    """Actor network for JobShop environment."""
+
+    def __init__(
+            self,
+            num_actions: int,
+            pre_torso: Optional[hk.Module] = None,
+            post_torso: Optional[hk.Module] = None,
+            encoder: Optional[hk.Module] = None,
+    ):
+        self.num_actions = num_actions
+        self.encoder = encoder or JobShopEncoder()
+        self.pre_torso = pre_torso
+        self.post_torso = post_torso
+        self.action_head = CategoricalActionHead(num_actions)
+
+    def __call__(self, observation):
+        # Encode observation
+        x = self.encoder(observation)
+
+        # Apply pre-torso if provided
+        if self.pre_torso:
+            x = self.pre_torso(x)
+
+        # Apply post-torso if provided
+        if self.post_torso:
+            x = self.post_torso(x)
+
+        # Get action distribution
+        return self.action_head(x, observation.action_mask)
+
+
+class JobShopCritic(BaseNetwork):
+    """Critic network for JobShop environment."""
+
+    def __init__(
+            self,
+            pre_torso: Optional[hk.Module] = None,
+            post_torso: Optional[hk.Module] = None,
+            encoder: Optional[hk.Module] = None,
+    ):
+        self.encoder = encoder or JobShopEncoder()
+        self.pre_torso = pre_torso
+        self.post_torso = post_torso
+
+    def __call__(self, observation):
+        # Encode observation
+        x = self.encoder(observation)
+
+        # Apply pre-torso if provided
+        if self.pre_torso:
+            x = self.pre_torso(x)
+
+        # Apply post-torso if provided
+        if self.post_torso:
+            x = self.post_torso(x)
+
+        # Output value estimate
+        value = hk.Linear(1)(x)
         return jnp.squeeze(value, axis=-1)
-
-# Helpers if used outside Hydra
-
-def create_networks(num_jobs: int, max_num_ops: int, num_machines: int):
-    encoder = JobShopEncoder(
-        num_jobs=num_jobs,
-        max_num_ops=max_num_ops,
-        num_machines=num_machines
-    )
-    num_actions = num_machines * (num_jobs + 1)
-    actor = JobShopActor(num_actions=num_actions)
-    critic = JobShopCritic()
-    return encoder, actor, critic
-
-
-def process_observation(j_obs: JObs, encoder: JobShopEncoder) -> Observation:
-    agents_view = encoder(j_obs)  # (1, 128)
-    action_mask = jnp.reshape(j_obs.action_mask, (1, -1))
-    return Observation(agents_view=agents_view, action_mask=action_mask)
