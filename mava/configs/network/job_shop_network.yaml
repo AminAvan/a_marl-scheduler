@@ -1,17 +1,20 @@
-# --- Transformer Network for JobShop ---
-num_layers: 1  # Number of transformer layers
-embed_dim: 64  # Embedding dimension for transformer
-num_heads: 1   # Number of attention heads
-use_swiglu: False  # Use SwiGLU instead of standard MLP in feedforward networks
+# mava/configs/network/job_shop_network.yaml
+# ───────────────────────────────────────────────────────────────────────────────
+# --- Transformer Network for JobShop ------------------------------------------
+num_layers: 1
+embed_dim: 64
+num_heads: 1
+use_swiglu: False
 
-# --- Actor Network Configuration ---
+# --- Actor network ------------------------------------------------------------
 actor_network:
+  _target_: mava.networks.job_shop_network.JobShopActor      # ← ADD THIS
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
     num_layers: ${network.num_layers}
-    embed_dim: ${network.embed_dim}
-    num_heads: ${network.num_heads}
-    input_dim: 128  # Adjust based on your JobShop environment's input size
+    embed_dim:  ${network.embed_dim}
+    num_heads:  ${network.num_heads}
+    input_dim:  128
     use_swiglu: ${network.use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
@@ -19,14 +22,15 @@ actor_network:
     use_layer_norm: False
     activation: relu
 
-# --- Critic Network Configuration (if applicable) ---
+# --- Critic network -----------------------------------------------------------
 critic_network:
+  _target_: mava.networks.job_shop_network.JobShopCritic     # ← ADD THIS
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
     num_layers: ${network.num_layers}
-    embed_dim: ${network.embed_dim}
-    num_heads: ${network.num_heads}
-    input_dim: 128  # Adjust based on your environment
+    embed_dim:  ${network.embed_dim}
+    num_heads:  ${network.num_heads}
+    input_dim:  128
     use_swiglu: ${network.use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
@@ -34,14 +38,14 @@ critic_network:
     use_layer_norm: False
     activation: relu
 
-# --- Q-Network Configuration (if applicable) ---
+# --- Q-network (only needed for algorithms that use it) -----------------------
 q_network:
   pre_torso:
     _target_: mava.networks.torsos.TransformerTorso
     num_layers: ${network.num_layers}
-    embed_dim: ${network.embed_dim}
-    num_heads: ${network.num_heads}
-    input_dim: 128  # Adjust based on your environment
+    embed_dim:  ${network.embed_dim}
+    num_heads:  ${network.num_heads}
+    input_dim:  128
     use_swiglu: ${network.use_swiglu}
   post_torso:
     _target_: mava.networks.torsos.MLPTorso
