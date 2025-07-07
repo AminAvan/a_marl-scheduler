@@ -3,7 +3,7 @@ _name_: job_shop_network
 defaults:
   - _self_
 
-# Get environment parameters
+# Get environment parameters directly from the scenario config
 num_jobs: ${env.scenario.task_config.num_jobs}
 num_machines: ${env.scenario.task_config.num_machines}
 max_num_ops: ${env.scenario.task_config.max_num_ops}
@@ -13,10 +13,8 @@ hidden_dim: 256
 num_layers: 3
 num_heads: 4
 
-# Calculate action dimension
-# For JobShop with 4 machines and 5 jobs: 4 * (5 + 1) = 24
-# Since we can't use eval, we'll set this directly based on your config
-action_dim: 24  # This should be num_machines * (num_jobs + 1)
+# Get action dimension from scenario config
+action_dim: ${env.scenario.action_dim}
 
 # --- Actor network torsos -----------------------------------------------------
 actor_network:
@@ -48,7 +46,7 @@ critic_network:
     use_layer_norm: false
     activation: relu
 
-# --- Q-network torsos (for algorithms that use it) ---------------------------
+# --- Q-network torsos ---------------------------------------------------------
 q_network:
   pre_torso:
     _target_: mava.networks.job_shop_network.JobShopAttentionTorso

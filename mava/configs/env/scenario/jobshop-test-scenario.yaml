@@ -17,6 +17,8 @@
 #######################################################
 # Configuration for the jobshop-test-scenario environment in Mava
 # Configuration for the jobshop-test-scenario environment in Mava
+# mava/configs/env/scenario/jobshop-test-scenario.yaml
+## The config of the jobshop-test-scenario environment
 name: JobShop-v0
 task_name: jobshop-test-scenario
 
@@ -25,6 +27,11 @@ task_config:
   num_machines: 4
   max_num_ops: 4
   max_op_duration: 4
+
+# Add action dimension for this specific scenario
+# Each machine can choose from (num_jobs + 1) actions
+# With 4 machines and 5 jobs: 4 * (5 + 1) = 24
+action_dim: 24
 
 env_kwargs: {}
 
