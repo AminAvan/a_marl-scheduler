@@ -3,17 +3,60 @@ _name_: job_shop_network
 defaults:
   - _self_
 
-# JobShop specific parameters
-num_actions: ${eval:'${env.scenario.task_config.num_machines} * (${env.scenario.task_config.num_jobs} + 1)'}  # 4 * (5 + 1) = 24
+# Get environment parameters
+num_jobs: ${env.scenario.task_config.num_jobs}
+num_machines: ${env.scenario.task_config.num_machines}
+max_num_ops: ${env.scenario.task_config.max_num_ops}
 
-# --- Actor network ------------------------------------------------------------
+# Network parameters
+hidden_dim: 256
+num_layers: 3
+num_heads: 4
+
+# Calculate action dimension
+action_dim: ${eval:'${network.num_machines} * (${network.num_jobs} + 1)'}
+
+# --- Actor network torsos -----------------------------------------------------
 actor_network:
-  _target_: mava.networks.job_shop_network.JobShopActor
-  num_actions: ${network.num_actions}
+  pre_torso:
+    _target_: mava.networks.job_shop_network.JobShopTorso
+    num_jobs: ${network.num_jobs}
+    num_machines: ${network.num_machines}
+    max_num_ops: ${network.max_num_ops}
+    hidden_dim: ${network.hidden_dim}
+    num_layers: ${network.num_layers}
+  post_torso:
+    _target_: mava.networks.torsos.MLPTorso
+    layer_sizes: [256, 128]
+    use_layer_norm: false
+    activation: relu
 
-# --- Critic network -----------------------------------------------------------
+# --- Critic network torsos ----------------------------------------------------
 critic_network:
-  _target_: mava.networks.job_shop_network.JobShopCritic
+  pre_torso:
+    _target_: mava.networks.job_shop_network.JobShopTorso
+    num_jobs: ${network.num_jobs}
+    num_machines: ${network.num_machines}
+    max_num_ops: ${network.max_num_ops}
+    hidden_dim: ${network.hidden_dim}
+    num_layers: ${network.num_layers}
+  post_torso:
+    _target_: mava.networks.torsos.MLPTorso
+    layer_sizes: [256, 128]
+    use_layer_norm: false
+    activation: relu
 
-# --- For compatibility with existing Mava code --------------------------------
-action_dim: ${network.num_actions}
+# --- Q-network torsos (for algorithms that use it) ---------------------------
+q_network:
+  pre_torso:
+    _target_: mava.networks.job_shop_network.JobShopAttentionTorso
+    num_jobs: ${network.num_jobs}
+    num_machines: ${network.num_machines}
+    max_num_ops: ${network.max_num_ops}
+    hidden_dim: ${network.hidden_dim}
+    num_heads: ${network.num_heads}
+  post_torso:
+    _target_: mava.networks.torsos.MLPTorso
+    layer_sizes: [256, 128]
+    use_layer_norm: false
+    activation: relu
