@@ -63,6 +63,13 @@ class JobShopWrapper(JumanjiMarlWrapper):
         )
         self._encoder_params = None
 
+        print(f"JobShop environment created with:")
+        print(f"  num_jobs: {self.num_jobs}")
+        print(f"  num_machines: {self.num_machines}")
+        print(f"  max_num_ops: {self.max_num_ops}")
+        print(f"  num_agents: {self.num_agents}")
+        print(f"  num_actions: {self.num_actions}")
+
     def _init_encoder_params(self, dummy_obs):
         """Initialize encoder parameters if not already done."""
         if self._encoder_params is None:
