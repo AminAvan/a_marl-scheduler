@@ -1,168 +1,300 @@
 """
-JobShop networks for Mava that work with the existing Mava architecture.
+JobShop networks for Mava - includes both torsos for Mava integration
+and direct networks for potential future use.
 """
 import jax
 import jax.numpy as jnp
 import flax.linen as nn
-import chex
-from typing import Tuple
-from mava.types import Observation
-from jumanji.environments.packing.job_shop.types import Observation as JObs
+import numpy as np
+from flax.linen.initializers import orthogonal
+from typing import NamedTuple, Tuple
+
+from jumanji.environments.packing.job_shop.types import Observation as JobShopObs
 
 
-class JobShopEncoder(nn.Module):
-    """Encoder for JobShop observations."""
+# ============================================================================
+# Torsos for Mava Integration (work with agents_view)
+# ============================================================================
+
+class JobShopTorso(nn.Module):
+    """
+    A torso that processes flattened JobShop observations.
+    This works with Mava's standard architecture.
+    """
+    num_jobs: int
+    num_machines: int
+    max_num_ops: int
+    hidden_dim: int = 256
+    num_layers: int = 3
+
+    @nn.compact
+    def __call__(self, agents_view: jnp.ndarray) -> jnp.ndarray:
+        """
+        Process the flattened JobShop features.
+
+        Args:
+            agents_view: Shape (batch, num_agents, feature_dim) or (num_agents, feature_dim)
+
+        Returns:
+            Processed features of shape (..., hidden_dim)
+        """
+        x = agents_view
+
+        # First layer to project from flat features to hidden dimension
+        x = nn.Dense(self.hidden_dim, kernel_init=orthogonal(np.sqrt(2)))(x)
+        x = nn.relu(x)
+
+        # Hidden layers with residual connections
+        for _ in range(self.num_layers - 1):
+            # Residual connection
+            residual = x
+            x = nn.Dense(self.hidden_dim, kernel_init=orthogonal(np.sqrt(2)))(x)
+            x = nn.relu(x)
+            x = nn.Dense(self.hidden_dim, kernel_init=orthogonal(np.sqrt(2)))(x)
+            x = x + residual
+            x = nn.relu(x)
+
+        return x
+
+
+class JobShopAttentionTorso(nn.Module):
+    """
+    A more sophisticated torso that tries to reconstruct structure from flat features.
+    """
+    num_jobs: int
+    num_machines: int
+    max_num_ops: int
+    hidden_dim: int = 256
+    num_heads: int = 4
+
+    def setup(self):
+        # Calculate indices for unpacking flat features
+        ops_size = self.num_jobs * self.max_num_ops
+        self.ops_machine_ids_idx = (0, ops_size)
+        self.ops_durations_idx = (ops_size, 2 * ops_size)
+        self.ops_mask_idx = (2 * ops_size, 3 * ops_size)
+        self.machines_job_ids_idx = (3 * ops_size, 3 * ops_size + self.num_machines)
+        self.machines_times_idx = (3 * ops_size + self.num_machines,
+                                   3 * ops_size + 2 * self.num_machines)
+
+    @nn.compact
+    def __call__(self, agents_view: jnp.ndarray) -> jnp.ndarray:
+        """
+        Process flattened features by reconstructing some structure.
+        """
+        # Save original shape
+        original_shape = agents_view.shape[:-1]
+        feature_dim = agents_view.shape[-1]
+
+        # Flatten batch and agent dimensions if needed
+        if agents_view.ndim > 2:
+            agents_view = agents_view.reshape(-1, feature_dim)
+
+        # Unpack different components (approximately)
+        # Note: This is a heuristic since we normalized in the wrapper
+        ops_features = agents_view[:, :3 * self.num_jobs * self.max_num_ops]
+        machine_features = agents_view[:, 3 * self.num_jobs * self.max_num_ops:]
+
+        # Process operations features
+        ops_encoded = nn.Dense(self.hidden_dim)(ops_features)
+        ops_encoded = nn.relu(ops_encoded)
+
+        # Process machine features
+        machine_encoded = nn.Dense(self.hidden_dim)(machine_features)
+        machine_encoded = nn.relu(machine_encoded)
+
+        # Self-attention on combined features
+        combined = ops_encoded + machine_encoded
+
+        # Multi-head attention
+        attn_output = nn.MultiHeadDotProductAttention(
+            num_heads=self.num_heads,
+            qkv_features=self.hidden_dim,
+            kernel_init=orthogonal(np.sqrt(2))
+        )(combined)
+
+        # Final projection
+        output = nn.Dense(self.hidden_dim, kernel_init=orthogonal(np.sqrt(2)))(attn_output)
+        output = nn.relu(output)
+
+        # Reshape back to original shape
+        output = output.reshape(*original_shape, self.hidden_dim)
+
+        return output
+
+
+# ============================================================================
+# Direct JobShop Networks (for potential future use with raw observations)
+# ============================================================================
+
+class JobShopActor(nn.Module):
+    """Actor network that directly processes JobShop observations."""
     num_jobs: int
     max_num_ops: int
     num_machines: int
-    embedding_dim: int = 64
-
-    @nn.compact
-    def __call__(self, j_obs: JObs) -> jnp.ndarray:
-        # Operation Encoder: Process ops_machine_ids, ops_durations, and ops_mask
-        ops_machine_emb = nn.Embed(
-            num_embeddings=self.num_machines,
-            features=self.embedding_dim
-        )(j_obs.ops_machine_ids)
-        ops_duration_emb = nn.Dense(self.embedding_dim)(
-            j_obs.ops_durations[..., None]
-        )
-        ops_emb = ops_machine_emb + ops_duration_emb  # (num_jobs, max_num_ops, embedding_dim)
-        ops_emb = ops_emb * j_obs.ops_mask[..., None]  # mask invalid ops
-
-        # Average pooling per job
-        job_emb = (
-                jnp.sum(ops_emb, axis=1)
-                / jnp.maximum(jnp.sum(j_obs.ops_mask, axis=1, keepdims=True), 1)
-        )  # Avoid division by zero
-
-        # Machine Encoder: Process machines_job_ids and machines_remaining_times
-        machines_job_emb = nn.Embed(
-            num_embeddings=self.num_jobs + 1,
-            features=self.embedding_dim
-        )(j_obs.machines_job_ids)
-        machines_time_emb = nn.Dense(self.embedding_dim)(
-            j_obs.machines_remaining_times[..., None]
-        )
-        machine_emb = machines_job_emb + machines_time_emb  # (num_machines, embedding_dim)
-        machine_emb = jnp.mean(machine_emb, axis=0)  # global avg pooling over machines
-
-        # Combine job and machine embeddings
-        combined_emb = jnp.concatenate(
-            [job_emb.flatten(), machine_emb], axis=-1
-        )
-        agents_view = nn.Dense(128)(combined_emb)  # project to fixed-size vector
-        return agents_view[None, :]  # shape: (1, 128)
-
-
-class JobShopActor(nn.Module):
-    """Actor network for JobShop that outputs action logits."""
     num_actions: int  # num_machines * (num_jobs + 1)
+    hidden_dim: int = 128
 
     @nn.compact
-    def __call__(self, observation: chex.ArrayTree) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    def __call__(self, observation: JobShopObs) -> jnp.ndarray:
         """
-        Process observation and return action logits and value.
+        Process JobShop observation directly and return action logits.
 
         Args:
-            observation: Mava Observation with agents_view and action_mask
+            observation: JobShop observation with ops_machine_ids, ops_durations, etc.
 
         Returns:
-            Tuple of (action_logits, value) where:
-            - action_logits: Array of shape (batch, num_agents, num_actions)
-            - value: Array of shape (batch, num_agents)
+            Action logits of shape (batch, num_machines, num_actions_per_machine)
         """
-        # Handle both Observation type and raw arrays
-        if hasattr(observation, 'agents_view'):
-            agents_view = observation.agents_view
-            action_mask = observation.action_mask
-        else:
-            # Assume it's already the agents_view
-            agents_view = observation
-            action_mask = None
+        # Process operations information
+        ops_machine_emb = nn.Embed(
+            num_embeddings=self.num_machines,
+            features=self.hidden_dim // 4
+        )(observation.ops_machine_ids)
 
-        # Process agents view
-        x = agents_view  # Expected shape: (batch, num_agents, features)
+        ops_duration_emb = nn.Dense(self.hidden_dim // 4)(
+            observation.ops_durations[..., None]
+        )
 
-        # If single agent view, expand dimensions
-        if x.ndim == 2:  # (batch, features)
-            x = jnp.expand_dims(x, 1)  # (batch, 1, features)
+        ops_features = jnp.concatenate([ops_machine_emb, ops_duration_emb], axis=-1)
+        ops_features = ops_features * observation.ops_mask[..., None]
 
-        # Apply layers
-        x = nn.Dense(256)(x)
-        x = nn.relu(x)
-        x = nn.Dense(128)(x)
-        x = nn.relu(x)
+        # Aggregate operation features per job
+        job_features = jnp.sum(ops_features, axis=-2) / jnp.maximum(
+            jnp.sum(observation.ops_mask, axis=-1, keepdims=True), 1
+        )
 
-        # Output heads
-        logits = nn.Dense(self.num_actions)(x)  # (batch, num_agents, num_actions)
-        value = nn.Dense(1)(x)  # (batch, num_agents, 1)
-        value = jnp.squeeze(value, axis=-1)  # (batch, num_agents)
+        # Process machine information
+        machine_job_emb = nn.Embed(
+            num_embeddings=self.num_jobs + 1,
+            features=self.hidden_dim // 2
+        )(observation.machines_job_ids)
 
-        # Apply action mask if provided
-        if action_mask is not None:
-            # Ensure mask has same shape as logits
-            if action_mask.shape != logits.shape:
-                if action_mask.ndim == 2 and logits.ndim == 3:
-                    # Expand mask from (batch, actions) to (batch, 1, actions)
-                    action_mask = jnp.expand_dims(action_mask, 1)
-                    # Repeat for all agents
-                    action_mask = jnp.repeat(action_mask, logits.shape[1], axis=1)
+        machine_time_emb = nn.Dense(self.hidden_dim // 2)(
+            observation.machines_remaining_times[..., None]
+        )
 
-            # Apply mask
-            logits = jnp.where(
-                action_mask,
-                logits,
-                jnp.finfo(jnp.float32).min
-            )
+        machine_features = jnp.concatenate([machine_job_emb, machine_time_emb], axis=-1)
 
-        return logits, value
+        # Combine job and machine features
+        # Create cross-attention between machines and jobs
+        machine_features = nn.Dense(self.hidden_dim)(machine_features)
+        job_features = nn.Dense(self.hidden_dim)(job_features)
+
+        # Simple attention mechanism
+        machine_query = nn.Dense(self.hidden_dim)(machine_features)
+        job_keys = nn.Dense(self.hidden_dim)(job_features)
+        job_values = nn.Dense(self.hidden_dim)(job_features)
+
+        # Compute attention scores
+        scores = jnp.einsum('...md,...jd->...mj', machine_query, job_keys)
+        scores = scores / jnp.sqrt(self.hidden_dim)
+        attention_weights = nn.softmax(scores, axis=-1)
+
+        # Apply attention
+        machine_context = jnp.einsum('...mj,...jd->...md', attention_weights, job_values)
+
+        # Combine with original machine features
+        combined_features = machine_features + machine_context
+        combined_features = nn.relu(combined_features)
+        combined_features = nn.Dense(self.hidden_dim)(combined_features)
+        combined_features = nn.relu(combined_features)
+
+        # Output logits for each machine
+        # Each machine can choose from (num_jobs + 1) actions
+        logits = nn.Dense(self.num_jobs + 1)(combined_features)
+
+        # Apply action mask
+        masked_logits = jnp.where(
+            observation.action_mask,
+            logits,
+            jnp.finfo(jnp.float32).min
+        )
+
+        return masked_logits
 
 
 class JobShopCritic(nn.Module):
-    """Critic network for JobShop."""
+    """Critic network that directly processes JobShop observations."""
+    num_jobs: int
+    max_num_ops: int
+    num_machines: int
+    hidden_dim: int = 128
 
     @nn.compact
-    def __call__(self, observation: chex.ArrayTree) -> jnp.ndarray:
+    def __call__(self, observation: JobShopObs) -> jnp.ndarray:
         """
-        Process observation and return value estimates.
+        Process JobShop observation and return value estimates.
 
         Args:
-            observation: Mava Observation with agents_view
+            observation: JobShop observation
 
         Returns:
-            Value estimates of shape (batch, num_agents)
+            Value estimates of shape (batch, num_machines)
         """
-        # Handle both Observation type and raw arrays
-        if hasattr(observation, 'agents_view'):
-            x = observation.agents_view
-        else:
-            x = observation
+        # Similar encoding as actor
+        ops_machine_emb = nn.Embed(
+            num_embeddings=self.num_machines,
+            features=self.hidden_dim // 4
+        )(observation.ops_machine_ids)
 
-        # If single agent view, expand dimensions
-        if x.ndim == 2:  # (batch, features)
-            x = jnp.expand_dims(x, 1)  # (batch, 1, features)
+        ops_duration_emb = nn.Dense(self.hidden_dim // 4)(
+            observation.ops_durations[..., None]
+        )
 
-        # Apply layers
-        x = nn.Dense(256)(x)
+        ops_features = jnp.concatenate([ops_machine_emb, ops_duration_emb], axis=-1)
+        ops_features = ops_features * observation.ops_mask[..., None]
+
+        # Global aggregation of all operations
+        global_ops_features = jnp.mean(
+            jnp.sum(ops_features, axis=-2) / jnp.maximum(
+                jnp.sum(observation.ops_mask, axis=-1, keepdims=True), 1
+            ),
+            axis=-2
+        )
+
+        # Machine features
+        machine_job_emb = nn.Embed(
+            num_embeddings=self.num_jobs + 1,
+            features=self.hidden_dim // 2
+        )(observation.machines_job_ids)
+
+        machine_time_emb = nn.Dense(self.hidden_dim // 2)(
+            observation.machines_remaining_times[..., None]
+        )
+
+        machine_features = jnp.concatenate([machine_job_emb, machine_time_emb], axis=-1)
+
+        # Combine global and per-machine features
+        global_features_expanded = jnp.expand_dims(global_ops_features, axis=-2)
+        global_features_expanded = jnp.tile(
+            global_features_expanded,
+            (1,) * (global_features_expanded.ndim - 2) + (self.num_machines, 1)
+        )
+
+        combined_features = jnp.concatenate(
+            [machine_features, global_features_expanded],
+            axis=-1
+        )
+
+        # Process through MLP
+        x = nn.Dense(self.hidden_dim)(combined_features)
         x = nn.relu(x)
-        x = nn.Dense(128)(x)
+        x = nn.Dense(self.hidden_dim // 2)(x)
         x = nn.relu(x)
 
-        # Output value
-        value = nn.Dense(1)(x)  # (batch, num_agents, 1)
-        value = jnp.squeeze(value, axis=-1)  # (batch, num_agents)
+        # Output one value per machine
+        values = nn.Dense(1)(x)
+        values = jnp.squeeze(values, axis=-1)
 
-        return value
+        return values
 
 
-# For compatibility with Mava's FeedForwardActor interface
-class JobShopFFActor(nn.Module):
-    """FeedForward Actor wrapper for JobShop."""
-    action_dim: int
+# ============================================================================
+# Helper Classes and Functions
+# ============================================================================
 
-    @nn.compact
-    def __call__(self, observation: chex.ArrayTree) -> Tuple[jnp.ndarray, jnp.ndarray]:
-        """Forward pass returning pi logits and value."""
-        actor = JobShopActor(num_actions=self.action_dim)
-        return actor(observation)
+class JobShopObservationWrapper(NamedTuple):
+    """Wrapper to pass both JobShop observation and any additional info."""
+    jobshop_obs: JobShopObs
+    step_count: jnp.ndarray = None
