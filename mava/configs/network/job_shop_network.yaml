@@ -14,7 +14,9 @@ num_layers: 3
 num_heads: 4
 
 # Calculate action dimension
-action_dim: ${eval:'${network.num_machines} * (${network.num_jobs} + 1)'}
+# For JobShop with 4 machines and 5 jobs: 4 * (5 + 1) = 24
+# Since we can't use eval, we'll set this directly based on your config
+action_dim: 24  # This should be num_machines * (num_jobs + 1)
 
 # --- Actor network torsos -----------------------------------------------------
 actor_network:
