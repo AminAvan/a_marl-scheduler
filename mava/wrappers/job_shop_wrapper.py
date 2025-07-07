@@ -5,7 +5,7 @@ A Mava multi-agent wrapper for Jumanji's JobShop environment.
 """
 import math
 from functools import cached_property
-from typing import Dict
+from typing import Dict, Tuple
 
 import jax.numpy as jnp
 import chex
@@ -53,40 +53,90 @@ class JobShopWrapper(JumanjiMarlWrapper):
         # Inject into env for base wrapper
         env.num_agents = num_agents
         env.time_limit = max_episode_steps
-        # Compute per-agent feature dimension by flattening ops_mask
-        j_spec = env.observation_spec
-        self.obs_feature_dim = math.prod(j_spec.ops_mask.shape)
+
+        # Store environment parameters
+        self.num_jobs = env.num_jobs
+        self.max_num_ops = env.max_num_ops
+        self.num_machines = env.num_machines
+
         # Define number of actions per agent (jobs + no-op)
         self.num_actions = env.num_jobs + 1
+
         # Initialize base wrapper (sets self._env, self.num_agents, self.time_limit)
         super().__init__(env, add_global_state)
 
-    def reset(self, key) -> TimeStep:
+        # Create the encoder once during initialization
+        from mava.networks.job_shop_network import JobShopEncoder
+        self.encoder = JobShopEncoder(
+            num_jobs=self.num_jobs,
+            max_num_ops=self.max_num_ops,
+            num_machines=self.num_machines,
+            embedding_dim=64
+        )
+
+    def reset(self, key) -> Tuple[chex.ArrayTree, TimeStep]:
         """
         Reset the environment and ensure the initial timestep is formatted
         as a Mava multi-agent timestep.
         """
         state, timestep = self._env.reset(key)  # Unpack the tuple
-        modified_timestep = self.modify_timestep(timestep)  # Pass the TimeStep object
+        modified_timestep = self.modify_timestep(timestep, state)  # Pass both
         return state, modified_timestep  # Return tuple as expected
 
-    def modify_timestep(self, timestep: TimeStep) -> TimeStep:
+    def step(self, state, actions) -> Tuple[chex.ArrayTree, TimeStep]:
+        """Step the environment with multi-agent actions."""
+        # Convert multi-agent actions to single-agent if needed
+        if actions.ndim == 2:  # (batch, num_agents)
+            # For JobShop, we might need to select one agent's action
+            # or combine them somehow. For now, let's use the first agent
+            actions = actions[:, 0]
+
+        state, timestep = self._env.step(state, actions)
+        modified_timestep = self.modify_timestep(timestep, state)
+        return state, modified_timestep
+
+    def modify_timestep(self, timestep: TimeStep, state=None) -> TimeStep:
         """
         Convert a single-agent Jumanji timestep into a multi-agent timestep,
         wrapping the raw Jumanji observation into Mava's Observation.
         """
-        # Flatten the ops_mask into a vector per agent
-        flat_obs = timestep.observation.ops_mask.reshape(-1)
-        agents_view = jnp.repeat(
-            jnp.expand_dims(flat_obs, 0), self.num_agents, axis=0
-        )
-        # Step count per agent
-        step_count = jnp.arange(self.num_agents)
+        # Use the encoder to process the JobShop observation
+        # Note: The encoder expects a single observation, not batched
+        obs = timestep.observation
+
+        # Initialize the encoder parameters if not done yet
+        if not hasattr(self, '_encoder_params'):
+            import jax
+            dummy_obs = self._env.observation_spec.generate_value()
+            self._encoder_params = self.encoder.init(
+                jax.random.PRNGKey(0), dummy_obs
+            )
+
+        # Apply the encoder to get agents_view
+        agents_view = self.encoder.apply(self._encoder_params, obs)
+
+        # Ensure agents_view has the right shape (num_agents, feature_dim)
+        if agents_view.ndim == 2:  # (1, feature_dim)
+            # Repeat for all agents
+            agents_view = jnp.repeat(agents_view, self.num_agents, axis=0)
+
+        # Handle action mask - ensure it's (num_agents, num_actions)
+        action_mask = obs.action_mask
+        if action_mask.ndim == 2:  # Already (num_machines, num_jobs+1)
+            # Good, this is what we expect
+            pass
+        elif action_mask.ndim == 1:  # Single agent mask
+            # Expand to multi-agent
+            action_mask = jnp.expand_dims(action_mask, 0)
+            action_mask = jnp.repeat(action_mask, self.num_agents, axis=0)
+
+        # Step count - use the timestep's step counter
+        step_count = jnp.full((self.num_agents,), timestep.step_count if hasattr(timestep, 'step_count') else 0)
 
         # Build Mava Observation
         observation = Observation(
-            agents_view=agents_view.astype(float),
-            action_mask=timestep.observation.action_mask,
+            agents_view=agents_view.astype(jnp.float32),
+            action_mask=action_mask,
             step_count=step_count,
         )
 
@@ -108,8 +158,20 @@ class JobShopWrapper(JumanjiMarlWrapper):
     @property
     def observation_spec(self):
         """Override observation spec to match Mava's Observation structure."""
+        # The encoder outputs 128-dimensional features
         return MavaObservationSpec(
-            agents_view_shape=(self.num_agents, self.obs_feature_dim),
+            agents_view_shape=(self.num_agents, 128),
             action_mask_shape=(self.num_agents, self.num_actions),
             step_count_shape=(self.num_agents,),
+        )
+
+    @property
+    def action_spec(self):
+        """Override action spec for multi-agent."""
+        # Return specs for multi-agent actions
+        return specs.Array(
+            shape=(self.num_agents,),
+            dtype=jnp.int32,
+            minimum=0,
+            maximum=self.num_actions - 1
         )
