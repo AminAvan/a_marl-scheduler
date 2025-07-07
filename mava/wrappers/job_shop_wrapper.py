@@ -1,5 +1,5 @@
 """
-job_shop_wrapper.py - Robust wrapper that ensures proper Mava observation format
+job_shop_wrapper.py - wrapper for JobShop integration with Mava
 """
 from typing import Dict, Tuple
 import jax
