@@ -1,45 +1,15 @@
-<p align="center">
-    <a href="docs/images/mava_logos/mava_full_logo.png">
-        <img src="docs/images/mava_logos/mava_full_logo.png" alt="Mava logo" width="50%"/>
-    </a>
-</p>
+The original README of Mava can be found in [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
 
-<h2 align="center">
-    <p>Distributed Multi-Agent Reinforcement Learning in JAX</p>
-</h2>
-
-<div align="center">
-
-![Python Version](https://img.shields.io/python/required-version-toml?tomlFilePath=https%3A%2F%2Fraw.githubusercontent.com%2Finstadeepai%2FMava%2Fdevelop%2Fpyproject.toml)
-[![Tests](https://github.com/instadeepai/Mava/actions/workflows/ci.yaml/badge.svg)](https://github.com/instadeepai/Mava/actions/workflows/ci.yaml)
-[![License](https://img.shields.io/badge/License-Apache%202.0-orange.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![MyPy](http://www.mypy-lang.org/static/mypy_badge.svg)](http://mypy-lang.org/)
-[![ArXiv](https://img.shields.io/badge/ArXiv-2410.01706-b31b1b.svg)](https://arxiv.org/abs/2410.01706)
-[![Collab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/instadeepai/Mava/blob/develop/examples/Quickstart.ipynb)
-</div>
-
-
-## Welcome to Mava! 🦁
-
-<div align="center">
-<h3>
+---
+## Overview
 
 [**Installation**](#installation-) | [**Getting started**](#getting-started-)
 
-</div>
-
 Mava allows researchers to experiment with multi-agent reinforcement learning (MARL) at lightning speed. The single-file JAX implementations are built for rapid research iteration - hack, modify, and test new ideas fast. Our [state-of-the-art algorithms][sable] scale seamlessly across devices. Created for researchers, by The Research Team at [InstaDeep](https://www.instadeep.com).
 
-## Highlights 🦜
+----
 
-- 🥑 **Implementations of MARL algorithms**: Implementations of current state-of-the-art MARL algorithms that are distributed and effectively make use of available accelerators.
-- 🍬 **Environment Wrappers**: We provide first class support to a few JAX based MARL environment suites through the use of wrappers, however new environments can be easily added by using existing wrappers as a guide.
-- 🧪 **Statistically robust evaluation**: Mava natively supports logging to json files which adhere to the standard suggested by [Gorsane et al. (2022)][toward_standard_eval]. This enables easy downstream experiment plotting and aggregation using the tools found in the [MARL-eval][marl_eval] library.
-- 🖥️ **JAX Distrubution Architectures for Reinforcement Learning**: Mava supports both [Podracer][anakin_paper] architectures for scaling RL systems. The first of these is _Anakin_, which can be used when environments are written in JAX. This enables end-to-end JIT compilation of the full MARL training loop for fast experiment run times on hardware accelerators. The second is _Sebulba_, which can be used when environments are not written in JAX. Sebulba is particularly useful when running RL experiments where a hardware accelerator can interact with many CPU cores at a time.
-- ⚡ **Blazingly fast experiments**: All of the above allow for very quick runtime for our experiments, especially when compared to other non-JAX based MARL libraries.
-
-## Installation 🎬
+## Installation
 
 At the moment Mava is not meant to be installed as a library, but rather to be used as a research tool. We recommend cloning the Mava repo and installing dependencies using [uv](https://github.com/astral-sh/uv) as follows:
 
