@@ -15,6 +15,7 @@
 import abc
 import logging
 import os
+import time
 import zipfile
 from datetime import datetime
 from enum import Enum
@@ -90,9 +91,9 @@ def winrate_custom_metric(metrics: Metrics) -> Metrics:
 
 class MavaLogger:
     def __init__(
-        self,
-        config: DictConfig,
-        custom_metrics_fn: Callable[[Metrics], Metrics] = winrate_custom_metric,
+            self,
+            config: DictConfig,
+            custom_metrics_fn: Callable[[Metrics], Metrics] = winrate_custom_metric,
     ) -> None:
         """The main logger for Mava systems.
 
@@ -191,6 +192,8 @@ class MultiLogger(BaseLogger):
     def __init__(self, loggers: List[BaseLogger]) -> None:
         """Logger that can log to multiple loggers at once."""
         self.loggers = loggers
+        # Initialize start time for elapsed time tracking
+        self.start_time = time.time()
 
     def log_stat(self, key: str, value: float, step: int, eval_step: int, event: LogEvent) -> None:
         for logger in self.loggers:
@@ -201,7 +204,10 @@ class MultiLogger(BaseLogger):
             logger.log_config(config)
 
     def log_dict(self, data: Metrics, step: int, eval_step: int, event: LogEvent) -> None:
+        # Pass the start time to each logger
         for logger in self.loggers:
+            if hasattr(logger, 'set_start_time'):
+                logger.set_start_time(self.start_time)
             logger.log_dict(data, step, eval_step, event)
 
     def stop(self) -> None:
@@ -211,17 +217,17 @@ class MultiLogger(BaseLogger):
 
 class NeptuneLogger(BaseLogger):
     def __init__(
-        self,
-        base_exp_path: PathLike,
-        unique_token: str,
-        system_name: str,
-        project: str,
-        tag: list[str],
-        group_tag: list[str],
-        detailed_logging: bool,
-        architecture_name: str,
-        upload_json_data: bool,
-        run_id: str | None = None,
+            self,
+            base_exp_path: PathLike,
+            unique_token: str,
+            system_name: str,
+            project: str,
+            tag: list[str],
+            group_tag: list[str],
+            detailed_logging: bool,
+            architecture_name: str,
+            upload_json_data: bool,
+            run_id: str | None = None,
     ) -> None:
         """
         Initialize neptune.ai logger for experiment tracking.
@@ -314,14 +320,14 @@ class JsonLogger(BaseLogger):
     _METRICS_TO_LOG: ClassVar[List[str]] = ["episode_return/mean", "win_rate", "steps_per_second"]
 
     def __init__(
-        self,
-        base_exp_path: PathLike,
-        unique_token: str,
-        system_name: str,
-        path: PathLike | None,
-        task_name: str,
-        env_name: str,
-        seed: int,
+            self,
+            base_exp_path: PathLike,
+            unique_token: str,
+            system_name: str,
+            path: PathLike | None,
+            task_name: str,
+            env_name: str,
+            seed: int,
     ) -> None:
         """
         Initialize JSON logger for marl-eval compatibility.
@@ -367,7 +373,8 @@ class JsonLogger(BaseLogger):
         if event == LogEvent.ABSOLUTE or event == LogEvent.EVAL:
             self.logger.write(step, key, value, eval_step, event == LogEvent.ABSOLUTE)
 
-    def log_config(self, config: Dict) -> None: ...
+    def log_config(self, config: Dict) -> None:
+        ...
 
 
 class ConsoleLogger(BaseLogger):
@@ -400,6 +407,14 @@ class ConsoleLogger(BaseLogger):
         # Set to info to suppress debug outputs.
         self.logger.setLevel("INFO")
 
+        # Store start time for elapsed time calculation
+        self.start_time = None
+
+    def set_start_time(self, start_time: float) -> None:
+        """Set the start time for elapsed time calculation."""
+        if self.start_time is None:
+            self.start_time = start_time
+
     def log_stat(self, key: str, value: float, step: int, eval_step: int, event: LogEvent) -> None:
         colour = self._EVENT_COLOURS[event]
 
@@ -414,11 +429,17 @@ class ConsoleLogger(BaseLogger):
         data = flatten_dict(data, sep=" ")
 
         colour = self._EVENT_COLOURS[event]
+
+        # Add elapsed time for MISC events with timestep
+        if event == LogEvent.MISC and "timestep" in data and self.start_time is not None:
+            elapsed_time = time.time() - self.start_time
+            data["elapsed time"] = f"{elapsed_time:.3f}"
+
         # Replace underscores with spaces and capitalise keys.
         keys = [k.replace("_", " ").capitalize() for k in data.keys()]
         # Round values to 3 decimal places if they are floats.
         values = []
-        for value in data.values():
+        for key, value in data.items():
             value = value.item() if isinstance(value, jax.Array) else value
             values.append(f"{value:.3f}" if isinstance(value, float) else str(value))
         log_str = " | ".join([f"{k}: {v}" for k, v in zip(keys, values, strict=True)])
@@ -438,10 +459,10 @@ def _make_multi_logger(cfg: DictConfig) -> MultiLogger:
     unique_token = datetime.now().strftime("%Y%m%d%H%M%S")
 
     if (
-        cfg.logger.loggers.neptune.enabled
-        and cfg.logger.loggers.json.enabled
-        and cfg.logger.loggers.neptune.upload_json_data
-        and cfg.logger.loggers.json.path
+            cfg.logger.loggers.neptune.enabled
+            and cfg.logger.loggers.json.enabled
+            and cfg.logger.loggers.neptune.upload_json_data
+            and cfg.logger.loggers.json.path
     ):
         raise ValueError(
             "Cannot upload json data to Neptune when `json_path` is set in the base logger config. "
