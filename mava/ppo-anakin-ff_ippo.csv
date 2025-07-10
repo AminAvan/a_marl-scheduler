@@ -1,0 +1,491 @@
+
+MISC - Timestep: 32768 | Elapsed time: 68.161
+ACTOR - Steps per second: 485.602 | Episode length mean: 14.930 | Episode length std: 4.763 | Episode length min: 1 | Episode length max: 32 | Episode return mean: -36.937 | Episode return std: 34.082 | Episode return min: -106.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.003 | Entropy: 0.148 | Total loss: 203.788 | Value loss: 407.583
+EVALUATOR - Steps per second: 75.110 | Episode length mean: 14.031 | Episode length std: 4.276 | Episode length min: 1 | Episode length max: 22 | Episode return mean: -53.531 | Episode return std: 38.307 | Episode return min: -98.000 | Episode return max: -12.000
+MISC - Timestep: 65536 | Elapsed time: 110.948
+ACTOR - Steps per second: 924.065 | Episode length mean: 15.320 | Episode length std: 4.042 | Episode length min: 4 | Episode length max: 32 | Episode return mean: -15.763 | Episode return std: 7.008 | Episode return min: -97.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.054 | Total loss: 5.394 | Value loss: 10.789
+EVALUATOR - Steps per second: 2777.965 | Episode length mean: 15.406 | Episode length std: 4.344 | Episode length min: 8 | Episode length max: 30 | Episode return mean: -15.406 | Episode return std: 4.344 | Episode return min: -30.000 | Episode return max: -8.000
+MISC - Timestep: 98304 | Elapsed time: 145.253
+ACTOR - Steps per second: 981.788 | Episode length mean: 15.165 | Episode length std: 4.096 | Episode length min: 5 | Episode length max: 33 | Episode return mean: -15.202 | Episode return std: 4.466 | Episode return min: -98.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.049 | Total loss: 1.239 | Value loss: 2.480
+EVALUATOR - Steps per second: 2143.961 | Episode length mean: 15.250 | Episode length std: 4.183 | Episode length min: 8 | Episode length max: 29 | Episode return mean: -15.250 | Episode return std: 4.183 | Episode return min: -29.000 | Episode return max: -8.000
+MISC - Timestep: 131072 | Elapsed time: 182.106
+ACTOR - Steps per second: 915.519 | Episode length mean: 14.993 | Episode length std: 3.959 | Episode length min: 5 | Episode length max: 31 | Episode return mean: -14.993 | Episode return std: 3.959 | Episode return min: -31.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.051 | Total loss: 0.802 | Value loss: 1.605
+EVALUATOR - Steps per second: 1856.345 | Episode length mean: 15.188 | Episode length std: 4.984 | Episode length min: 7 | Episode length max: 23 | Episode return mean: -15.188 | Episode return std: 4.984 | Episode return min: -23.000 | Episode return max: -7.000
+MISC - Timestep: 163840 | Elapsed time: 221.682
+ACTOR - Steps per second: 850.924 | Episode length mean: 14.883 | Episode length std: 3.877 | Episode length min: 4 | Episode length max: 32 | Episode return mean: -14.883 | Episode return std: 3.877 | Episode return min: -32.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.046 | Total loss: 0.737 | Value loss: 1.476
+EVALUATOR - Steps per second: 2137.399 | Episode length mean: 15.156 | Episode length std: 3.938 | Episode length min: 8 | Episode length max: 23 | Episode return mean: -15.156 | Episode return std: 3.938 | Episode return min: -23.000 | Episode return max: -8.000
+MISC - Timestep: 196608 | Elapsed time: 259.794
+ACTOR - Steps per second: 884.236 | Episode length mean: 14.693 | Episode length std: 3.803 | Episode length min: 5 | Episode length max: 31 | Episode return mean: -14.693 | Episode return std: 3.803 | Episode return min: -31.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.041 | Total loss: 0.706 | Value loss: 1.414
+EVALUATOR - Steps per second: 1672.968 | Episode length mean: 14.406 | Episode length std: 3.856 | Episode length min: 7 | Episode length max: 20 | Episode return mean: -14.406 | Episode return std: 3.856 | Episode return min: -20.000 | Episode return max: -7.000
+MISC - Timestep: 229376 | Elapsed time: 300.007
+ACTOR - Steps per second: 837.346 | Episode length mean: 14.555 | Episode length std: 3.677 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.555 | Episode return std: 3.677 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.037 | Total loss: 0.651 | Value loss: 1.303
+EVALUATOR - Steps per second: 1802.748 | Episode length mean: 14.438 | Episode length std: 3.526 | Episode length min: 7 | Episode length max: 21 | Episode return mean: -14.438 | Episode return std: 3.526 | Episode return min: -21.000 | Episode return max: -7.000
+MISC - Timestep: 262144 | Elapsed time: 337.793
+ACTOR - Steps per second: 891.394 | Episode length mean: 14.435 | Episode length std: 3.748 | Episode length min: 3 | Episode length max: 29 | Episode return mean: -14.435 | Episode return std: 3.748 | Episode return min: -29.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.034 | Total loss: 0.656 | Value loss: 1.313
+EVALUATOR - Steps per second: 1927.378 | Episode length mean: 14.844 | Episode length std: 3.456 | Episode length min: 8 | Episode length max: 23 | Episode return mean: -14.844 | Episode return std: 3.456 | Episode return min: -23.000 | Episode return max: -8.000
+MISC - Timestep: 294912 | Elapsed time: 379.650
+ACTOR - Steps per second: 803.599 | Episode length mean: 14.596 | Episode length std: 3.779 | Episode length min: 4 | Episode length max: 33 | Episode return mean: -14.596 | Episode return std: 3.779 | Episode return min: -33.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.030 | Total loss: 0.655 | Value loss: 1.311
+EVALUATOR - Steps per second: 1700.214 | Episode length mean: 15.031 | Episode length std: 3.127 | Episode length min: 10 | Episode length max: 22 | Episode return mean: -15.031 | Episode return std: 3.127 | Episode return min: -22.000 | Episode return max: -10.000
+MISC - Timestep: 327680 | Elapsed time: 425.509
+ACTOR - Steps per second: 734.385 | Episode length mean: 14.431 | Episode length std: 3.752 | Episode length min: 3 | Episode length max: 32 | Episode return mean: -14.431 | Episode return std: 3.752 | Episode return min: -32.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.027 | Total loss: 0.623 | Value loss: 1.248
+EVALUATOR - Steps per second: 1766.850 | Episode length mean: 14.750 | Episode length std: 3.733 | Episode length min: 7 | Episode length max: 21 | Episode return mean: -14.750 | Episode return std: 3.733 | Episode return min: -21.000 | Episode return max: -7.000
+MISC - Timestep: 360448 | Elapsed time: 471.201
+ACTOR - Steps per second: 736.135 | Episode length mean: 14.308 | Episode length std: 3.607 | Episode length min: 5 | Episode length max: 35 | Episode return mean: -14.308 | Episode return std: 3.607 | Episode return min: -35.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.026 | Total loss: 0.601 | Value loss: 1.204
+EVALUATOR - Steps per second: 1757.457 | Episode length mean: 14.656 | Episode length std: 3.559 | Episode length min: 8 | Episode length max: 24 | Episode return mean: -14.656 | Episode return std: 3.559 | Episode return min: -24.000 | Episode return max: -8.000
+MISC - Timestep: 393216 | Elapsed time: 516.555
+ACTOR - Steps per second: 741.462 | Episode length mean: 14.419 | Episode length std: 3.761 | Episode length min: 4 | Episode length max: 34 | Episode return mean: -14.419 | Episode return std: 3.761 | Episode return min: -34.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.026 | Total loss: 0.618 | Value loss: 1.237
+EVALUATOR - Steps per second: 1515.664 | Episode length mean: 13.781 | Episode length std: 2.736 | Episode length min: 8 | Episode length max: 21 | Episode return mean: -13.781 | Episode return std: 2.736 | Episode return min: -21.000 | Episode return max: -8.000
+MISC - Timestep: 425984 | Elapsed time: 562.300
+ACTOR - Steps per second: 735.667 | Episode length mean: 14.302 | Episode length std: 3.680 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.302 | Episode return std: 3.680 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.027 | Total loss: 0.594 | Value loss: 1.190
+EVALUATOR - Steps per second: 1550.399 | Episode length mean: 14.094 | Episode length std: 3.014 | Episode length min: 10 | Episode length max: 23 | Episode return mean: -14.094 | Episode return std: 3.014 | Episode return min: -23.000 | Episode return max: -10.000
+MISC - Timestep: 458752 | Elapsed time: 601.863
+ACTOR - Steps per second: 856.961 | Episode length mean: 14.319 | Episode length std: 3.679 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.319 | Episode return std: 3.679 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.026 | Total loss: 0.582 | Value loss: 1.166
+EVALUATOR - Steps per second: 1740.694 | Episode length mean: 13.812 | Episode length std: 3.477 | Episode length min: 7 | Episode length max: 21 | Episode return mean: -13.812 | Episode return std: 3.477 | Episode return min: -21.000 | Episode return max: -7.000
+MISC - Timestep: 491520 | Elapsed time: 643.198
+ACTOR - Steps per second: 817.916 | Episode length mean: 14.190 | Episode length std: 3.599 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.190 | Episode return std: 3.599 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.026 | Total loss: 0.555 | Value loss: 1.112
+EVALUATOR - Steps per second: 1878.291 | Episode length mean: 14.594 | Episode length std: 3.757 | Episode length min: 8 | Episode length max: 24 | Episode return mean: -14.594 | Episode return std: 3.757 | Episode return min: -24.000 | Episode return max: -8.000
+MISC - Timestep: 524288 | Elapsed time: 684.176
+ACTOR - Steps per second: 824.027 | Episode length mean: 14.252 | Episode length std: 3.693 | Episode length min: 4 | Episode length max: 35 | Episode return mean: -14.252 | Episode return std: 3.693 | Episode return min: -35.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.026 | Total loss: 0.576 | Value loss: 1.154
+EVALUATOR - Steps per second: 2370.377 | Episode length mean: 15.531 | Episode length std: 3.269 | Episode length min: 10 | Episode length max: 24 | Episode return mean: -15.531 | Episode return std: 3.269 | Episode return min: -24.000 | Episode return max: -10.000
+MISC - Timestep: 557056 | Elapsed time: 724.545
+ACTOR - Steps per second: 839.811 | Episode length mean: 14.373 | Episode length std: 3.766 | Episode length min: 3 | Episode length max: 34 | Episode return mean: -14.373 | Episode return std: 3.766 | Episode return min: -34.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.025 | Total loss: 0.581 | Value loss: 1.164
+EVALUATOR - Steps per second: 2106.008 | Episode length mean: 14.719 | Episode length std: 3.923 | Episode length min: 5 | Episode length max: 23 | Episode return mean: -14.719 | Episode return std: 3.923 | Episode return min: -23.000 | Episode return max: -5.000
+MISC - Timestep: 589824 | Elapsed time: 762.901
+ACTOR - Steps per second: 878.684 | Episode length mean: 14.322 | Episode length std: 3.697 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.322 | Episode return std: 3.697 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.025 | Total loss: 0.555 | Value loss: 1.112
+EVALUATOR - Steps per second: 1902.507 | Episode length mean: 15.688 | Episode length std: 5.382 | Episode length min: 8 | Episode length max: 27 | Episode return mean: -15.688 | Episode return std: 5.382 | Episode return min: -27.000 | Episode return max: -8.000
+MISC - Timestep: 622592 | Elapsed time: 804.204
+ACTOR - Steps per second: 819.095 | Episode length mean: 14.237 | Episode length std: 3.735 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.237 | Episode return std: 3.735 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.025 | Total loss: 0.555 | Value loss: 1.111
+EVALUATOR - Steps per second: 1748.752 | Episode length mean: 14.688 | Episode length std: 2.941 | Episode length min: 10 | Episode length max: 20 | Episode return mean: -14.688 | Episode return std: 2.941 | Episode return min: -20.000 | Episode return max: -10.000
+MISC - Timestep: 655360 | Elapsed time: 850.248
+ACTOR - Steps per second: 730.196 | Episode length mean: 14.152 | Episode length std: 3.558 | Episode length min: 5 | Episode length max: 30 | Episode return mean: -14.152 | Episode return std: 3.558 | Episode return min: -30.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.023 | Total loss: 0.534 | Value loss: 1.070
+EVALUATOR - Steps per second: 1909.027 | Episode length mean: 15.219 | Episode length std: 3.389 | Episode length min: 9 | Episode length max: 25 | Episode return mean: -15.219 | Episode return std: 3.389 | Episode return min: -25.000 | Episode return max: -9.000
+MISC - Timestep: 688128 | Elapsed time: 895.654
+ACTOR - Steps per second: 739.788 | Episode length mean: 14.218 | Episode length std: 3.585 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.218 | Episode return std: 3.585 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.022 | Total loss: 0.532 | Value loss: 1.066
+EVALUATOR - Steps per second: 1709.343 | Episode length mean: 13.750 | Episode length std: 3.640 | Episode length min: 8 | Episode length max: 21 | Episode return mean: -13.750 | Episode return std: 3.640 | Episode return min: -21.000 | Episode return max: -8.000
+MISC - Timestep: 720896 | Elapsed time: 936.302
+ACTOR - Steps per second: 829.299 | Episode length mean: 14.122 | Episode length std: 3.645 | Episode length min: 3 | Episode length max: 29 | Episode return mean: -14.122 | Episode return std: 3.645 | Episode return min: -29.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.020 | Total loss: 0.541 | Value loss: 1.084
+EVALUATOR - Steps per second: 1494.206 | Episode length mean: 13.562 | Episode length std: 3.172 | Episode length min: 7 | Episode length max: 20 | Episode return mean: -13.562 | Episode return std: 3.172 | Episode return min: -20.000 | Episode return max: -7.000
+MISC - Timestep: 753664 | Elapsed time: 981.464
+ACTOR - Steps per second: 739.289 | Episode length mean: 14.186 | Episode length std: 3.540 | Episode length min: 3 | Episode length max: 29 | Episode return mean: -14.186 | Episode return std: 3.540 | Episode return min: -29.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.020 | Total loss: 0.503 | Value loss: 1.007
+EVALUATOR - Steps per second: 1865.877 | Episode length mean: 13.750 | Episode length std: 3.211 | Episode length min: 8 | Episode length max: 21 | Episode return mean: -13.750 | Episode return std: 3.211 | Episode return min: -21.000 | Episode return max: -8.000
+MISC - Timestep: 786432 | Elapsed time: 1022.057
+ACTOR - Steps per second: 820.016 | Episode length mean: 14.462 | Episode length std: 3.741 | Episode length min: 3 | Episode length max: 30 | Episode return mean: -14.462 | Episode return std: 3.741 | Episode return min: -30.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.538 | Value loss: 1.077
+EVALUATOR - Steps per second: 1624.873 | Episode length mean: 13.812 | Episode length std: 3.933 | Episode length min: 8 | Episode length max: 24 | Episode return mean: -13.812 | Episode return std: 3.933 | Episode return min: -24.000 | Episode return max: -8.000
+MISC - Timestep: 819200 | Elapsed time: 1061.052
+ACTOR - Steps per second: 864.052 | Episode length mean: 14.266 | Episode length std: 3.624 | Episode length min: 4 | Episode length max: 35 | Episode return mean: -14.266 | Episode return std: 3.624 | Episode return min: -35.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.528 | Value loss: 1.058
+EVALUATOR - Steps per second: 2053.958 | Episode length mean: 14.844 | Episode length std: 4.016 | Episode length min: 8 | Episode length max: 25 | Episode return mean: -14.844 | Episode return std: 4.016 | Episode return min: -25.000 | Episode return max: -8.000
+MISC - Timestep: 851968 | Elapsed time: 1100.488
+ACTOR - Steps per second: 853.265 | Episode length mean: 14.200 | Episode length std: 3.625 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.200 | Episode return std: 3.625 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.018 | Total loss: 0.511 | Value loss: 1.023
+EVALUATOR - Steps per second: 2050.967 | Episode length mean: 14.250 | Episode length std: 3.345 | Episode length min: 6 | Episode length max: 21 | Episode return mean: -14.250 | Episode return std: 3.345 | Episode return min: -21.000 | Episode return max: -6.000
+MISC - Timestep: 884736 | Elapsed time: 1143.157
+ACTOR - Steps per second: 792.811 | Episode length mean: 14.271 | Episode length std: 3.635 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.271 | Episode return std: 3.635 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.018 | Total loss: 0.525 | Value loss: 1.050
+EVALUATOR - Steps per second: 2014.696 | Episode length mean: 13.531 | Episode length std: 4.062 | Episode length min: 7 | Episode length max: 25 | Episode return mean: -13.531 | Episode return std: 4.062 | Episode return min: -25.000 | Episode return max: -7.000
+MISC - Timestep: 917504 | Elapsed time: 1182.887
+ACTOR - Steps per second: 846.310 | Episode length mean: 14.240 | Episode length std: 3.665 | Episode length min: 5 | Episode length max: 30 | Episode return mean: -14.240 | Episode return std: 3.665 | Episode return min: -30.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.000 | Entropy: 0.019 | Total loss: 0.507 | Value loss: 1.015
+EVALUATOR - Steps per second: 1695.900 | Episode length mean: 14.938 | Episode length std: 3.716 | Episode length min: 8 | Episode length max: 23 | Episode return mean: -14.938 | Episode return std: 3.716 | Episode return min: -23.000 | Episode return max: -8.000
+MISC - Timestep: 950272 | Elapsed time: 1223.044
+ACTOR - Steps per second: 840.396 | Episode length mean: 14.290 | Episode length std: 3.649 | Episode length min: 3 | Episode length max: 31 | Episode return mean: -14.290 | Episode return std: 3.649 | Episode return min: -31.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.018 | Total loss: 0.539 | Value loss: 1.079
+EVALUATOR - Steps per second: 2094.738 | Episode length mean: 14.750 | Episode length std: 3.775 | Episode length min: 8 | Episode length max: 25 | Episode return mean: -14.750 | Episode return std: 3.775 | Episode return min: -25.000 | Episode return max: -8.000
+MISC - Timestep: 983040 | Elapsed time: 1261.726
+ACTOR - Steps per second: 862.219 | Episode length mean: 14.277 | Episode length std: 3.723 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.277 | Episode return std: 3.723 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.512 | Value loss: 1.026
+EVALUATOR - Steps per second: 1574.247 | Episode length mean: 13.375 | Episode length std: 3.398 | Episode length min: 6 | Episode length max: 23 | Episode return mean: -13.375 | Episode return std: 3.398 | Episode return min: -23.000 | Episode return max: -6.000
+MISC - Timestep: 1015808 | Elapsed time: 1302.644
+ACTOR - Steps per second: 814.356 | Episode length mean: 14.223 | Episode length std: 3.753 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.223 | Episode return std: 3.753 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.000 | Entropy: 0.019 | Total loss: 0.514 | Value loss: 1.030
+EVALUATOR - Steps per second: 1808.509 | Episode length mean: 13.656 | Episode length std: 2.734 | Episode length min: 7 | Episode length max: 21 | Episode return mean: -13.656 | Episode return std: 2.734 | Episode return min: -21.000 | Episode return max: -7.000
+MISC - Timestep: 1048576 | Elapsed time: 1344.115
+ACTOR - Steps per second: 805.306 | Episode length mean: 14.308 | Episode length std: 3.607 | Episode length min: 4 | Episode length max: 33 | Episode return mean: -14.308 | Episode return std: 3.607 | Episode return min: -33.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.020 | Total loss: 0.500 | Value loss: 1.002
+EVALUATOR - Steps per second: 1625.742 | Episode length mean: 13.906 | Episode length std: 3.055 | Episode length min: 7 | Episode length max: 21 | Episode return mean: -13.906 | Episode return std: 3.055 | Episode return min: -21.000 | Episode return max: -7.000
+MISC - Timestep: 1081344 | Elapsed time: 1378.382
+ACTOR - Steps per second: 975.142 | Episode length mean: 14.226 | Episode length std: 3.632 | Episode length min: 4 | Episode length max: 32 | Episode return mean: -14.226 | Episode return std: 3.632 | Episode return min: -32.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.506 | Value loss: 1.013
+EVALUATOR - Steps per second: 2087.854 | Episode length mean: 13.656 | Episode length std: 3.322 | Episode length min: 7 | Episode length max: 21 | Episode return mean: -13.656 | Episode return std: 3.322 | Episode return min: -21.000 | Episode return max: -7.000
+MISC - Timestep: 1114112 | Elapsed time: 1413.394
+ACTOR - Steps per second: 962.089 | Episode length mean: 14.286 | Episode length std: 3.543 | Episode length min: 2 | Episode length max: 27 | Episode return mean: -14.286 | Episode return std: 3.543 | Episode return min: -27.000 | Episode return max: -2.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.469 | Value loss: 0.939
+EVALUATOR - Steps per second: 1756.870 | Episode length mean: 13.844 | Episode length std: 3.270 | Episode length min: 9 | Episode length max: 21 | Episode return mean: -13.844 | Episode return std: 3.270 | Episode return min: -21.000 | Episode return max: -9.000
+MISC - Timestep: 1146880 | Elapsed time: 1449.323
+ACTOR - Steps per second: 938.296 | Episode length mean: 14.163 | Episode length std: 3.645 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.163 | Episode return std: 3.645 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.484 | Value loss: 0.969
+EVALUATOR - Steps per second: 1815.213 | Episode length mean: 14.156 | Episode length std: 2.785 | Episode length min: 9 | Episode length max: 21 | Episode return mean: -14.156 | Episode return std: 2.785 | Episode return min: -21.000 | Episode return max: -9.000
+MISC - Timestep: 1179648 | Elapsed time: 1485.524
+ACTOR - Steps per second: 922.028 | Episode length mean: 14.243 | Episode length std: 3.641 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.243 | Episode return std: 3.641 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.018 | Total loss: 0.486 | Value loss: 0.973
+EVALUATOR - Steps per second: 1705.445 | Episode length mean: 12.938 | Episode length std: 2.828 | Episode length min: 9 | Episode length max: 21 | Episode return mean: -12.938 | Episode return std: 2.828 | Episode return min: -21.000 | Episode return max: -9.000
+MISC - Timestep: 1212416 | Elapsed time: 1520.662
+ACTOR - Steps per second: 948.581 | Episode length mean: 14.258 | Episode length std: 3.731 | Episode length min: 5 | Episode length max: 39 | Episode return mean: -14.258 | Episode return std: 3.731 | Episode return min: -39.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.503 | Value loss: 1.006
+EVALUATOR - Steps per second: 1778.547 | Episode length mean: 14.312 | Episode length std: 3.601 | Episode length min: 8 | Episode length max: 23 | Episode return mean: -14.312 | Episode return std: 3.601 | Episode return min: -23.000 | Episode return max: -8.000
+MISC - Timestep: 1245184 | Elapsed time: 1555.470
+ACTOR - Steps per second: 969.027 | Episode length mean: 14.228 | Episode length std: 3.608 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.228 | Episode return std: 3.608 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.488 | Value loss: 0.978
+EVALUATOR - Steps per second: 1779.817 | Episode length mean: 13.438 | Episode length std: 3.220 | Episode length min: 7 | Episode length max: 22 | Episode return mean: -13.438 | Episode return std: 3.220 | Episode return min: -22.000 | Episode return max: -7.000
+MISC - Timestep: 1277952 | Elapsed time: 1590.565
+ACTOR - Steps per second: 959.253 | Episode length mean: 14.123 | Episode length std: 3.610 | Episode length min: 3 | Episode length max: 29 | Episode return mean: -14.123 | Episode return std: 3.610 | Episode return min: -29.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.457 | Value loss: 0.916
+EVALUATOR - Steps per second: 2181.482 | Episode length mean: 14.906 | Episode length std: 4.072 | Episode length min: 7 | Episode length max: 23 | Episode return mean: -14.906 | Episode return std: 4.072 | Episode return min: -23.000 | Episode return max: -7.000
+MISC - Timestep: 1310720 | Elapsed time: 1625.023
+ACTOR - Steps per second: 977.603 | Episode length mean: 14.108 | Episode length std: 3.526 | Episode length min: 5 | Episode length max: 31 | Episode return mean: -14.108 | Episode return std: 3.526 | Episode return min: -31.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.466 | Value loss: 0.932
+EVALUATOR - Steps per second: 2133.802 | Episode length mean: 15.188 | Episode length std: 4.326 | Episode length min: 9 | Episode length max: 25 | Episode return mean: -15.188 | Episode return std: 4.326 | Episode return min: -25.000 | Episode return max: -9.000
+MISC - Timestep: 1343488 | Elapsed time: 1660.359
+ACTOR - Steps per second: 953.224 | Episode length mean: 14.094 | Episode length std: 3.612 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.094 | Episode return std: 3.612 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.488 | Value loss: 0.978
+EVALUATOR - Steps per second: 2592.440 | Episode length mean: 14.156 | Episode length std: 3.411 | Episode length min: 9 | Episode length max: 25 | Episode return mean: -14.156 | Episode return std: 3.411 | Episode return min: -25.000 | Episode return max: -9.000
+MISC - Timestep: 1376256 | Elapsed time: 1694.947
+ACTOR - Steps per second: 973.015 | Episode length mean: 14.187 | Episode length std: 3.561 | Episode length min: 4 | Episode length max: 34 | Episode return mean: -14.187 | Episode return std: 3.561 | Episode return min: -34.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.472 | Value loss: 0.945
+EVALUATOR - Steps per second: 1952.784 | Episode length mean: 13.688 | Episode length std: 3.644 | Episode length min: 8 | Episode length max: 25 | Episode return mean: -13.688 | Episode return std: 3.644 | Episode return min: -25.000 | Episode return max: -8.000
+MISC - Timestep: 1409024 | Elapsed time: 1730.442
+ACTOR - Steps per second: 940.572 | Episode length mean: 14.308 | Episode length std: 3.660 | Episode length min: 5 | Episode length max: 30 | Episode return mean: -14.308 | Episode return std: 3.660 | Episode return min: -30.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.476 | Value loss: 0.953
+EVALUATOR - Steps per second: 1775.721 | Episode length mean: 15.156 | Episode length std: 3.528 | Episode length min: 8 | Episode length max: 25 | Episode return mean: -15.156 | Episode return std: 3.528 | Episode return min: -25.000 | Episode return max: -8.000
+MISC - Timestep: 1441792 | Elapsed time: 1765.622
+ACTOR - Steps per second: 939.881 | Episode length mean: 14.332 | Episode length std: 3.649 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.332 | Episode return std: 3.649 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.475 | Value loss: 0.951
+EVALUATOR - Steps per second: 1606.865 | Episode length mean: 14.469 | Episode length std: 3.373 | Episode length min: 7 | Episode length max: 24 | Episode return mean: -14.469 | Episode return std: 3.373 | Episode return min: -24.000 | Episode return max: -7.000
+MISC - Timestep: 1474560 | Elapsed time: 1801.210
+ACTOR - Steps per second: 939.432 | Episode length mean: 14.215 | Episode length std: 3.526 | Episode length min: 3 | Episode length max: 27 | Episode return mean: -14.215 | Episode return std: 3.526 | Episode return min: -27.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.453 | Value loss: 0.906
+EVALUATOR - Steps per second: 1905.312 | Episode length mean: 14.125 | Episode length std: 3.471 | Episode length min: 7 | Episode length max: 20 | Episode return mean: -14.125 | Episode return std: 3.471 | Episode return min: -20.000 | Episode return max: -7.000
+MISC - Timestep: 1507328 | Elapsed time: 1836.690
+ACTOR - Steps per second: 951.124 | Episode length mean: 14.089 | Episode length std: 3.568 | Episode length min: 5 | Episode length max: 28 | Episode return mean: -14.089 | Episode return std: 3.568 | Episode return min: -28.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.472 | Value loss: 0.946
+EVALUATOR - Steps per second: 2009.323 | Episode length mean: 14.688 | Episode length std: 2.899 | Episode length min: 9 | Episode length max: 20 | Episode return mean: -14.688 | Episode return std: 2.899 | Episode return min: -20.000 | Episode return max: -9.000
+MISC - Timestep: 1540096 | Elapsed time: 1870.313
+ACTOR - Steps per second: 993.436 | Episode length mean: 14.128 | Episode length std: 3.468 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.128 | Episode return std: 3.468 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.478 | Value loss: 0.956
+EVALUATOR - Steps per second: 2049.272 | Episode length mean: 15.438 | Episode length std: 3.588 | Episode length min: 9 | Episode length max: 25 | Episode return mean: -15.438 | Episode return std: 3.588 | Episode return min: -25.000 | Episode return max: -9.000
+MISC - Timestep: 1572864 | Elapsed time: 1905.069
+ACTOR - Steps per second: 959.579 | Episode length mean: 14.271 | Episode length std: 3.540 | Episode length min: 5 | Episode length max: 29 | Episode return mean: -14.271 | Episode return std: 3.540 | Episode return min: -29.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.458 | Value loss: 0.918
+EVALUATOR - Steps per second: 2594.714 | Episode length mean: 14.125 | Episode length std: 3.416 | Episode length min: 8 | Episode length max: 22 | Episode return mean: -14.125 | Episode return std: 3.416 | Episode return min: -22.000 | Episode return max: -8.000
+MISC - Timestep: 1605632 | Elapsed time: 1939.903
+ACTOR - Steps per second: 956.870 | Episode length mean: 14.137 | Episode length std: 3.630 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.137 | Episode return std: 3.630 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.462 | Value loss: 0.924
+EVALUATOR - Steps per second: 1394.267 | Episode length mean: 13.969 | Episode length std: 4.081 | Episode length min: 7 | Episode length max: 24 | Episode return mean: -13.969 | Episode return std: 4.081 | Episode return min: -24.000 | Episode return max: -7.000
+MISC - Timestep: 1638400 | Elapsed time: 1978.553
+ACTOR - Steps per second: 855.854 | Episode length mean: 14.205 | Episode length std: 3.574 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.205 | Episode return std: 3.574 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.449 | Value loss: 0.899
+EVALUATOR - Steps per second: 1818.716 | Episode length mean: 13.531 | Episode length std: 3.102 | Episode length min: 9 | Episode length max: 23 | Episode return mean: -13.531 | Episode return std: 3.102 | Episode return min: -23.000 | Episode return max: -9.000
+MISC - Timestep: 1671168 | Elapsed time: 2013.273
+ACTOR - Steps per second: 951.332 | Episode length mean: 14.224 | Episode length std: 3.592 | Episode length min: 3 | Episode length max: 32 | Episode return mean: -14.224 | Episode return std: 3.592 | Episode return min: -32.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.500 | Value loss: 1.002
+EVALUATOR - Steps per second: 1970.082 | Episode length mean: 14.906 | Episode length std: 3.794 | Episode length min: 9 | Episode length max: 24 | Episode return mean: -14.906 | Episode return std: 3.794 | Episode return min: -24.000 | Episode return max: -9.000
+MISC - Timestep: 1703936 | Elapsed time: 2048.190
+ACTOR - Steps per second: 955.010 | Episode length mean: 14.254 | Episode length std: 3.652 | Episode length min: 3 | Episode length max: 34 | Episode return mean: -14.254 | Episode return std: 3.652 | Episode return min: -34.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.508 | Value loss: 1.018
+EVALUATOR - Steps per second: 2114.325 | Episode length mean: 13.312 | Episode length std: 3.386 | Episode length min: 7 | Episode length max: 22 | Episode return mean: -13.312 | Episode return std: 3.386 | Episode return min: -22.000 | Episode return max: -7.000
+MISC - Timestep: 1736704 | Elapsed time: 2085.146
+ACTOR - Steps per second: 906.387 | Episode length mean: 14.278 | Episode length std: 3.598 | Episode length min: 5 | Episode length max: 29 | Episode return mean: -14.278 | Episode return std: 3.598 | Episode return min: -29.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.497 | Value loss: 0.995
+EVALUATOR - Steps per second: 1514.473 | Episode length mean: 14.438 | Episode length std: 4.213 | Episode length min: 6 | Episode length max: 27 | Episode return mean: -14.438 | Episode return std: 4.213 | Episode return min: -27.000 | Episode return max: -6.000
+MISC - Timestep: 1769472 | Elapsed time: 2122.168
+ACTOR - Steps per second: 901.271 | Episode length mean: 14.112 | Episode length std: 3.520 | Episode length min: 5 | Episode length max: 27 | Episode return mean: -14.112 | Episode return std: 3.520 | Episode return min: -27.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.014 | Total loss: 0.461 | Value loss: 0.922
+EVALUATOR - Steps per second: 1927.142 | Episode length mean: 13.844 | Episode length std: 3.768 | Episode length min: 7 | Episode length max: 23 | Episode return mean: -13.844 | Episode return std: 3.768 | Episode return min: -23.000 | Episode return max: -7.000
+MISC - Timestep: 1802240 | Elapsed time: 2157.184
+ACTOR - Steps per second: 953.216 | Episode length mean: 14.284 | Episode length std: 3.650 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.284 | Episode return std: 3.650 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.000 | Entropy: 0.015 | Total loss: 0.487 | Value loss: 0.976
+EVALUATOR - Steps per second: 1633.918 | Episode length mean: 14.438 | Episode length std: 3.082 | Episode length min: 9 | Episode length max: 20 | Episode return mean: -14.438 | Episode return std: 3.082 | Episode return min: -20.000 | Episode return max: -9.000
+MISC - Timestep: 1835008 | Elapsed time: 2191.757
+ACTOR - Steps per second: 965.796 | Episode length mean: 14.205 | Episode length std: 3.647 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.205 | Episode return std: 3.647 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.489 | Value loss: 0.978
+EVALUATOR - Steps per second: 1754.638 | Episode length mean: 14.875 | Episode length std: 3.059 | Episode length min: 10 | Episode length max: 23 | Episode return mean: -14.875 | Episode return std: 3.059 | Episode return min: -23.000 | Episode return max: -10.000
+MISC - Timestep: 1867776 | Elapsed time: 2229.443
+ACTOR - Steps per second: 887.026 | Episode length mean: 14.197 | Episode length std: 3.573 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.197 | Episode return std: 3.573 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.495 | Value loss: 0.991
+EVALUATOR - Steps per second: 1649.887 | Episode length mean: 14.188 | Episode length std: 3.117 | Episode length min: 8 | Episode length max: 21 | Episode return mean: -14.188 | Episode return std: 3.117 | Episode return min: -21.000 | Episode return max: -8.000
+MISC - Timestep: 1900544 | Elapsed time: 2265.905
+ACTOR - Steps per second: 916.914 | Episode length mean: 14.213 | Episode length std: 3.608 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.213 | Episode return std: 3.608 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.496 | Value loss: 0.992
+EVALUATOR - Steps per second: 1933.672 | Episode length mean: 14.625 | Episode length std: 3.863 | Episode length min: 7 | Episode length max: 25 | Episode return mean: -14.625 | Episode return std: 3.863 | Episode return min: -25.000 | Episode return max: -7.000
+MISC - Timestep: 1933312 | Elapsed time: 2300.794
+ACTOR - Steps per second: 967.708 | Episode length mean: 14.259 | Episode length std: 3.643 | Episode length min: 3 | Episode length max: 31 | Episode return mean: -14.259 | Episode return std: 3.643 | Episode return min: -31.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.000 | Entropy: 0.015 | Total loss: 0.490 | Value loss: 0.981
+EVALUATOR - Steps per second: 1718.960 | Episode length mean: 14.594 | Episode length std: 3.454 | Episode length min: 10 | Episode length max: 24 | Episode return mean: -14.594 | Episode return std: 3.454 | Episode return min: -24.000 | Episode return max: -10.000
+MISC - Timestep: 1966080 | Elapsed time: 2336.378
+ACTOR - Steps per second: 946.422 | Episode length mean: 14.155 | Episode length std: 3.623 | Episode length min: 4 | Episode length max: 37 | Episode return mean: -14.155 | Episode return std: 3.623 | Episode return min: -37.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.471 | Value loss: 0.944
+EVALUATOR - Steps per second: 1994.572 | Episode length mean: 14.438 | Episode length std: 3.716 | Episode length min: 8 | Episode length max: 23 | Episode return mean: -14.438 | Episode return std: 3.716 | Episode return min: -23.000 | Episode return max: -8.000
+MISC - Timestep: 1998848 | Elapsed time: 2377.173
+ACTOR - Steps per second: 816.245 | Episode length mean: 14.361 | Episode length std: 3.629 | Episode length min: 4 | Episode length max: 32 | Episode return mean: -14.361 | Episode return std: 3.629 | Episode return min: -32.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.498 | Value loss: 0.997
+EVALUATOR - Steps per second: 1866.994 | Episode length mean: 14.656 | Episode length std: 3.109 | Episode length min: 8 | Episode length max: 20 | Episode return mean: -14.656 | Episode return std: 3.109 | Episode return min: -20.000 | Episode return max: -8.000
+MISC - Timestep: 2031616 | Elapsed time: 2420.865
+ACTOR - Steps per second: 763.508 | Episode length mean: 14.232 | Episode length std: 3.660 | Episode length min: 5 | Episode length max: 32 | Episode return mean: -14.232 | Episode return std: 3.660 | Episode return min: -32.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.493 | Value loss: 0.988
+EVALUATOR - Steps per second: 1523.618 | Episode length mean: 14.750 | Episode length std: 3.767 | Episode length min: 8 | Episode length max: 24 | Episode return mean: -14.750 | Episode return std: 3.767 | Episode return min: -24.000 | Episode return max: -8.000
+MISC - Timestep: 2064384 | Elapsed time: 2463.662
+ACTOR - Steps per second: 772.252 | Episode length mean: 14.077 | Episode length std: 3.558 | Episode length min: 5 | Episode length max: 31 | Episode return mean: -14.077 | Episode return std: 3.558 | Episode return min: -31.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.469 | Value loss: 0.940
+EVALUATOR - Steps per second: 1799.329 | Episode length mean: 14.812 | Episode length std: 3.235 | Episode length min: 8 | Episode length max: 23 | Episode return mean: -14.812 | Episode return std: 3.235 | Episode return min: -23.000 | Episode return max: -8.000
+MISC - Timestep: 2097152 | Elapsed time: 2503.999
+ACTOR - Steps per second: 818.545 | Episode length mean: 14.322 | Episode length std: 3.689 | Episode length min: 4 | Episode length max: 34 | Episode return mean: -14.322 | Episode return std: 3.689 | Episode return min: -34.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.000 | Entropy: 0.015 | Total loss: 0.480 | Value loss: 0.960
+EVALUATOR - Steps per second: 1773.724 | Episode length mean: 15.219 | Episode length std: 4.277 | Episode length min: 7 | Episode length max: 26 | Episode return mean: -15.219 | Episode return std: 4.277 | Episode return min: -26.000 | Episode return max: -7.000
+MISC - Timestep: 2129920 | Elapsed time: 2542.969
+ACTOR - Steps per second: 855.458 | Episode length mean: 14.348 | Episode length std: 3.591 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.348 | Episode return std: 3.591 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.474 | Value loss: 0.950
+EVALUATOR - Steps per second: 1775.002 | Episode length mean: 15.594 | Episode length std: 4.307 | Episode length min: 9 | Episode length max: 30 | Episode return mean: -15.594 | Episode return std: 4.307 | Episode return min: -30.000 | Episode return max: -9.000
+MISC - Timestep: 2162688 | Elapsed time: 2586.070
+ACTOR - Steps per second: 774.107 | Episode length mean: 14.271 | Episode length std: 3.618 | Episode length min: 5 | Episode length max: 31 | Episode return mean: -14.271 | Episode return std: 3.618 | Episode return min: -31.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.466 | Value loss: 0.932
+EVALUATOR - Steps per second: 1929.916 | Episode length mean: 14.250 | Episode length std: 3.571 | Episode length min: 9 | Episode length max: 23 | Episode return mean: -14.250 | Episode return std: 3.571 | Episode return min: -23.000 | Episode return max: -9.000
+MISC - Timestep: 2195456 | Elapsed time: 2620.891
+ACTOR - Steps per second: 960.202 | Episode length mean: 14.194 | Episode length std: 3.536 | Episode length min: 4 | Episode length max: 34 | Episode return mean: -14.194 | Episode return std: 3.536 | Episode return min: -34.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.000 | Entropy: 0.015 | Total loss: 0.458 | Value loss: 0.918
+EVALUATOR - Steps per second: 2221.354 | Episode length mean: 14.875 | Episode length std: 3.248 | Episode length min: 9 | Episode length max: 24 | Episode return mean: -14.875 | Episode return std: 3.248 | Episode return min: -24.000 | Episode return max: -9.000
+MISC - Timestep: 2228224 | Elapsed time: 2654.622
+ACTOR - Steps per second: 989.284 | Episode length mean: 14.168 | Episode length std: 3.555 | Episode length min: 4 | Episode length max: 27 | Episode return mean: -14.168 | Episode return std: 3.555 | Episode return min: -27.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.447 | Value loss: 0.896
+EVALUATOR - Steps per second: 1816.793 | Episode length mean: 13.969 | Episode length std: 3.459 | Episode length min: 8 | Episode length max: 21 | Episode return mean: -13.969 | Episode return std: 3.459 | Episode return min: -21.000 | Episode return max: -8.000
+MISC - Timestep: 2260992 | Elapsed time: 2690.407
+ACTOR - Steps per second: 931.442 | Episode length mean: 14.303 | Episode length std: 3.632 | Episode length min: 5 | Episode length max: 34 | Episode return mean: -14.303 | Episode return std: 3.632 | Episode return min: -34.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.490 | Value loss: 0.981
+EVALUATOR - Steps per second: 2478.241 | Episode length mean: 13.406 | Episode length std: 3.888 | Episode length min: 5 | Episode length max: 23 | Episode return mean: -13.406 | Episode return std: 3.888 | Episode return min: -23.000 | Episode return max: -5.000
+MISC - Timestep: 2293760 | Elapsed time: 2724.687
+ACTOR - Steps per second: 972.290 | Episode length mean: 14.296 | Episode length std: 3.611 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.296 | Episode return std: 3.611 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.445 | Value loss: 0.892
+EVALUATOR - Steps per second: 1925.763 | Episode length mean: 14.469 | Episode length std: 2.610 | Episode length min: 7 | Episode length max: 20 | Episode return mean: -14.469 | Episode return std: 2.610 | Episode return min: -20.000 | Episode return max: -7.000
+MISC - Timestep: 2326528 | Elapsed time: 2758.173
+ACTOR - Steps per second: 986.759 | Episode length mean: 14.117 | Episode length std: 3.553 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.117 | Episode return std: 3.553 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.441 | Value loss: 0.883
+EVALUATOR - Steps per second: 1429.251 | Episode length mean: 12.938 | Episode length std: 3.220 | Episode length min: 8 | Episode length max: 22 | Episode return mean: -12.938 | Episode return std: 3.220 | Episode return min: -22.000 | Episode return max: -8.000
+MISC - Timestep: 2359296 | Elapsed time: 2792.289
+ACTOR - Steps per second: 978.927 | Episode length mean: 14.104 | Episode length std: 3.526 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.104 | Episode return std: 3.526 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.446 | Value loss: 0.894
+EVALUATOR - Steps per second: 2167.599 | Episode length mean: 15.000 | Episode length std: 3.031 | Episode length min: 7 | Episode length max: 22 | Episode return mean: -15.000 | Episode return std: 3.031 | Episode return min: -22.000 | Episode return max: -7.000
+MISC - Timestep: 2392064 | Elapsed time: 2827.135
+ACTOR - Steps per second: 957.199 | Episode length mean: 14.219 | Episode length std: 3.587 | Episode length min: 3 | Episode length max: 30 | Episode return mean: -14.219 | Episode return std: 3.587 | Episode return min: -30.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.452 | Value loss: 0.905
+EVALUATOR - Steps per second: 2055.254 | Episode length mean: 14.625 | Episode length std: 2.859 | Episode length min: 6 | Episode length max: 19 | Episode return mean: -14.625 | Episode return std: 2.859 | Episode return min: -19.000 | Episode return max: -6.000
+MISC - Timestep: 2424832 | Elapsed time: 2860.894
+ACTOR - Steps per second: 978.435 | Episode length mean: 14.204 | Episode length std: 3.487 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.204 | Episode return std: 3.487 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.460 | Value loss: 0.922
+EVALUATOR - Steps per second: 1452.181 | Episode length mean: 14.281 | Episode length std: 2.896 | Episode length min: 8 | Episode length max: 19 | Episode return mean: -14.281 | Episode return std: 2.896 | Episode return min: -19.000 | Episode return max: -8.000
+MISC - Timestep: 2457600 | Elapsed time: 2894.253
+ACTOR - Steps per second: 992.878 | Episode length mean: 14.147 | Episode length std: 3.668 | Episode length min: 5 | Episode length max: 36 | Episode return mean: -14.147 | Episode return std: 3.668 | Episode return min: -36.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.448 | Value loss: 0.897
+EVALUATOR - Steps per second: 1716.862 | Episode length mean: 14.438 | Episode length std: 3.758 | Episode length min: 6 | Episode length max: 25 | Episode return mean: -14.438 | Episode return std: 3.758 | Episode return min: -25.000 | Episode return max: -6.000
+MISC - Timestep: 2490368 | Elapsed time: 2928.405
+ACTOR - Steps per second: 968.104 | Episode length mean: 14.184 | Episode length std: 3.623 | Episode length min: 4 | Episode length max: 34 | Episode return mean: -14.184 | Episode return std: 3.623 | Episode return min: -34.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.453 | Value loss: 0.907
+EVALUATOR - Steps per second: 1849.687 | Episode length mean: 14.031 | Episode length std: 3.653 | Episode length min: 8 | Episode length max: 22 | Episode return mean: -14.031 | Episode return std: 3.653 | Episode return min: -22.000 | Episode return max: -8.000
+MISC - Timestep: 2523136 | Elapsed time: 2963.251
+ACTOR - Steps per second: 948.734 | Episode length mean: 14.112 | Episode length std: 3.549 | Episode length min: 5 | Episode length max: 30 | Episode return mean: -14.112 | Episode return std: 3.549 | Episode return min: -30.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.467 | Value loss: 0.934
+EVALUATOR - Steps per second: 1360.602 | Episode length mean: 14.031 | Episode length std: 3.828 | Episode length min: 6 | Episode length max: 23 | Episode return mean: -14.031 | Episode return std: 3.828 | Episode return min: -23.000 | Episode return max: -6.000
+MISC - Timestep: 2555904 | Elapsed time: 3006.236
+ACTOR - Steps per second: 769.319 | Episode length mean: 14.203 | Episode length std: 3.550 | Episode length min: 4 | Episode length max: 35 | Episode return mean: -14.203 | Episode return std: 3.550 | Episode return min: -35.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.464 | Value loss: 0.930
+EVALUATOR - Steps per second: 1311.097 | Episode length mean: 12.469 | Episode length std: 3.666 | Episode length min: 7 | Episode length max: 19 | Episode return mean: -12.469 | Episode return std: 3.666 | Episode return min: -19.000 | Episode return max: -7.000
+MISC - Timestep: 2588672 | Elapsed time: 3049.465
+ACTOR - Steps per second: 770.663 | Episode length mean: 14.075 | Episode length std: 3.546 | Episode length min: 4 | Episode length max: 35 | Episode return mean: -14.075 | Episode return std: 3.546 | Episode return min: -35.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.439 | Value loss: 0.879
+EVALUATOR - Steps per second: 2062.021 | Episode length mean: 14.312 | Episode length std: 2.963 | Episode length min: 7 | Episode length max: 19 | Episode return mean: -14.312 | Episode return std: 2.963 | Episode return min: -19.000 | Episode return max: -7.000
+MISC - Timestep: 2621440 | Elapsed time: 3090.750
+ACTOR - Steps per second: 807.309 | Episode length mean: 14.152 | Episode length std: 3.675 | Episode length min: 3 | Episode length max: 30 | Episode return mean: -14.152 | Episode return std: 3.675 | Episode return min: -30.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.465 | Value loss: 0.930
+EVALUATOR - Steps per second: 1935.349 | Episode length mean: 14.281 | Episode length std: 4.732 | Episode length min: 5 | Episode length max: 26 | Episode return mean: -14.281 | Episode return std: 4.732 | Episode return min: -26.000 | Episode return max: -5.000
+MISC - Timestep: 2654208 | Elapsed time: 3130.074
+ACTOR - Steps per second: 839.165 | Episode length mean: 14.120 | Episode length std: 3.536 | Episode length min: 5 | Episode length max: 28 | Episode return mean: -14.120 | Episode return std: 3.536 | Episode return min: -28.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.454 | Value loss: 0.909
+EVALUATOR - Steps per second: 1540.241 | Episode length mean: 12.844 | Episode length std: 2.063 | Episode length min: 9 | Episode length max: 17 | Episode return mean: -12.844 | Episode return std: 2.063 | Episode return min: -17.000 | Episode return max: -9.000
+MISC - Timestep: 2686976 | Elapsed time: 3169.494
+ACTOR - Steps per second: 837.990 | Episode length mean: 14.175 | Episode length std: 3.668 | Episode length min: 3 | Episode length max: 30 | Episode return mean: -14.175 | Episode return std: 3.668 | Episode return min: -30.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.462 | Value loss: 0.926
+EVALUATOR - Steps per second: 1629.834 | Episode length mean: 14.219 | Episode length std: 3.389 | Episode length min: 8 | Episode length max: 21 | Episode return mean: -14.219 | Episode return std: 3.389 | Episode return min: -21.000 | Episode return max: -8.000
+MISC - Timestep: 2719744 | Elapsed time: 3210.068
+ACTOR - Steps per second: 821.426 | Episode length mean: 13.991 | Episode length std: 3.569 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -13.991 | Episode return std: 3.569 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.452 | Value loss: 0.905
+EVALUATOR - Steps per second: 1797.067 | Episode length mean: 14.750 | Episode length std: 3.640 | Episode length min: 6 | Episode length max: 24 | Episode return mean: -14.750 | Episode return std: 3.640 | Episode return min: -24.000 | Episode return max: -6.000
+MISC - Timestep: 2752512 | Elapsed time: 3249.976
+ACTOR - Steps per second: 836.250 | Episode length mean: 14.269 | Episode length std: 3.628 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.269 | Episode return std: 3.628 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.465 | Value loss: 0.932
+EVALUATOR - Steps per second: 1591.343 | Episode length mean: 15.812 | Episode length std: 4.340 | Episode length min: 8 | Episode length max: 28 | Episode return mean: -15.812 | Episode return std: 4.340 | Episode return min: -28.000 | Episode return max: -8.000
+MISC - Timestep: 2785280 | Elapsed time: 3290.260
+ACTOR - Steps per second: 820.898 | Episode length mean: 14.221 | Episode length std: 3.672 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.221 | Episode return std: 3.672 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.471 | Value loss: 0.943
+EVALUATOR - Steps per second: 1759.265 | Episode length mean: 13.688 | Episode length std: 3.720 | Episode length min: 5 | Episode length max: 22 | Episode return mean: -13.688 | Episode return std: 3.720 | Episode return min: -22.000 | Episode return max: -5.000
+MISC - Timestep: 2818048 | Elapsed time: 3329.389
+ACTOR - Steps per second: 843.682 | Episode length mean: 14.179 | Episode length std: 3.707 | Episode length min: 5 | Episode length max: 31 | Episode return mean: -14.179 | Episode return std: 3.707 | Episode return min: -31.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.458 | Value loss: 0.917
+EVALUATOR - Steps per second: 1759.065 | Episode length mean: 13.469 | Episode length std: 4.548 | Episode length min: 6 | Episode length max: 25 | Episode return mean: -13.469 | Episode return std: 4.548 | Episode return min: -25.000 | Episode return max: -6.000
+MISC - Timestep: 2850816 | Elapsed time: 3367.831
+ACTOR - Steps per second: 858.853 | Episode length mean: 14.170 | Episode length std: 3.628 | Episode length min: 3 | Episode length max: 31 | Episode return mean: -14.170 | Episode return std: 3.628 | Episode return min: -31.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.018 | Total loss: 0.434 | Value loss: 0.869
+EVALUATOR - Steps per second: 1702.208 | Episode length mean: 14.906 | Episode length std: 3.635 | Episode length min: 7 | Episode length max: 22 | Episode return mean: -14.906 | Episode return std: 3.635 | Episode return min: -22.000 | Episode return max: -7.000
+MISC - Timestep: 2883584 | Elapsed time: 3406.726
+ACTOR - Steps per second: 849.416 | Episode length mean: 14.148 | Episode length std: 3.661 | Episode length min: 4 | Episode length max: 32 | Episode return mean: -14.148 | Episode return std: 3.661 | Episode return min: -32.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.440 | Value loss: 0.882
+EVALUATOR - Steps per second: 1742.583 | Episode length mean: 13.969 | Episode length std: 3.349 | Episode length min: 7 | Episode length max: 23 | Episode return mean: -13.969 | Episode return std: 3.349 | Episode return min: -23.000 | Episode return max: -7.000
+MISC - Timestep: 2916352 | Elapsed time: 3446.476
+ACTOR - Steps per second: 830.663 | Episode length mean: 14.338 | Episode length std: 3.587 | Episode length min: 5 | Episode length max: 31 | Episode return mean: -14.338 | Episode return std: 3.587 | Episode return min: -31.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.454 | Value loss: 0.909
+EVALUATOR - Steps per second: 1366.947 | Episode length mean: 13.656 | Episode length std: 3.341 | Episode length min: 8 | Episode length max: 21 | Episode return mean: -13.656 | Episode return std: 3.341 | Episode return min: -21.000 | Episode return max: -8.000
+MISC - Timestep: 2949120 | Elapsed time: 3489.419
+ACTOR - Steps per second: 776.665 | Episode length mean: 14.364 | Episode length std: 3.583 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.364 | Episode return std: 3.583 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.018 | Total loss: 0.442 | Value loss: 0.885
+EVALUATOR - Steps per second: 1914.205 | Episode length mean: 14.031 | Episode length std: 3.861 | Episode length min: 5 | Episode length max: 23 | Episode return mean: -14.031 | Episode return std: 3.861 | Episode return min: -23.000 | Episode return max: -5.000
+MISC - Timestep: 2981888 | Elapsed time: 3529.620
+ACTOR - Steps per second: 830.194 | Episode length mean: 14.181 | Episode length std: 3.598 | Episode length min: 3 | Episode length max: 28 | Episode return mean: -14.181 | Episode return std: 3.598 | Episode return min: -28.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.426 | Value loss: 0.853
+EVALUATOR - Steps per second: 1885.411 | Episode length mean: 15.531 | Episode length std: 3.775 | Episode length min: 8 | Episode length max: 22 | Episode return mean: -15.531 | Episode return std: 3.775 | Episode return min: -22.000 | Episode return max: -8.000
+MISC - Timestep: 3014656 | Elapsed time: 3569.624
+ACTOR - Steps per second: 825.484 | Episode length mean: 14.142 | Episode length std: 3.567 | Episode length min: 4 | Episode length max: 32 | Episode return mean: -14.142 | Episode return std: 3.567 | Episode return min: -32.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.445 | Value loss: 0.890
+EVALUATOR - Steps per second: 1886.971 | Episode length mean: 14.156 | Episode length std: 3.429 | Episode length min: 8 | Episode length max: 24 | Episode return mean: -14.156 | Episode return std: 3.429 | Episode return min: -24.000 | Episode return max: -8.000
+MISC - Timestep: 3047424 | Elapsed time: 3609.280
+ACTOR - Steps per second: 832.445 | Episode length mean: 14.180 | Episode length std: 3.715 | Episode length min: 3 | Episode length max: 32 | Episode return mean: -14.180 | Episode return std: 3.715 | Episode return min: -32.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.452 | Value loss: 0.904
+EVALUATOR - Steps per second: 1992.271 | Episode length mean: 14.438 | Episode length std: 4.007 | Episode length min: 8 | Episode length max: 24 | Episode return mean: -14.438 | Episode return std: 4.007 | Episode return min: -24.000 | Episode return max: -8.000
+MISC - Timestep: 3080192 | Elapsed time: 3649.544
+ACTOR - Steps per second: 826.215 | Episode length mean: 14.079 | Episode length std: 3.618 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.079 | Episode return std: 3.618 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.437 | Value loss: 0.875
+EVALUATOR - Steps per second: 1698.474 | Episode length mean: 14.250 | Episode length std: 4.000 | Episode length min: 7 | Episode length max: 23 | Episode return mean: -14.250 | Episode return std: 4.000 | Episode return min: -23.000 | Episode return max: -7.000
+MISC - Timestep: 3112960 | Elapsed time: 3689.216
+ACTOR - Steps per second: 841.782 | Episode length mean: 14.345 | Episode length std: 3.578 | Episode length min: 4 | Episode length max: 35 | Episode return mean: -14.345 | Episode return std: 3.578 | Episode return min: -35.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.442 | Value loss: 0.885
+EVALUATOR - Steps per second: 1629.496 | Episode length mean: 13.781 | Episode length std: 3.179 | Episode length min: 7 | Episode length max: 21 | Episode return mean: -13.781 | Episode return std: 3.179 | Episode return min: -21.000 | Episode return max: -7.000
+MISC - Timestep: 3145728 | Elapsed time: 3730.998
+ACTOR - Steps per second: 790.147 | Episode length mean: 14.089 | Episode length std: 3.488 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.089 | Episode return std: 3.488 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.398 | Value loss: 0.797
+EVALUATOR - Steps per second: 1773.406 | Episode length mean: 14.281 | Episode length std: 3.651 | Episode length min: 9 | Episode length max: 25 | Episode return mean: -14.281 | Episode return std: 3.651 | Episode return min: -25.000 | Episode return max: -9.000
+MISC - Timestep: 3178496 | Elapsed time: 3772.558
+ACTOR - Steps per second: 794.346 | Episode length mean: 14.240 | Episode length std: 3.557 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.240 | Episode return std: 3.557 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.424 | Value loss: 0.849
+EVALUATOR - Steps per second: 1603.276 | Episode length mean: 13.438 | Episode length std: 3.881 | Episode length min: 7 | Episode length max: 22 | Episode return mean: -13.438 | Episode return std: 3.881 | Episode return min: -22.000 | Episode return max: -7.000
+MISC - Timestep: 3211264 | Elapsed time: 3814.122
+ACTOR - Steps per second: 794.259 | Episode length mean: 14.166 | Episode length std: 3.528 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.166 | Episode return std: 3.528 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.432 | Value loss: 0.865
+EVALUATOR - Steps per second: 1534.472 | Episode length mean: 13.500 | Episode length std: 3.400 | Episode length min: 8 | Episode length max: 22 | Episode return mean: -13.500 | Episode return std: 3.400 | Episode return min: -22.000 | Episode return max: -8.000
+MISC - Timestep: 3244032 | Elapsed time: 3857.688
+ACTOR - Steps per second: 757.916 | Episode length mean: 14.232 | Episode length std: 3.547 | Episode length min: 3 | Episode length max: 29 | Episode return mean: -14.232 | Episode return std: 3.547 | Episode return min: -29.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.431 | Value loss: 0.864
+EVALUATOR - Steps per second: 1453.642 | Episode length mean: 14.531 | Episode length std: 3.491 | Episode length min: 9 | Episode length max: 24 | Episode return mean: -14.531 | Episode return std: 3.491 | Episode return min: -24.000 | Episode return max: -9.000
+MISC - Timestep: 3276800 | Elapsed time: 3892.115
+ACTOR - Steps per second: 961.999 | Episode length mean: 14.255 | Episode length std: 3.567 | Episode length min: 5 | Episode length max: 29 | Episode return mean: -14.290 | Episode return std: 3.936 | Episode return min: -94.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.019 | Total loss: 0.777 | Value loss: 1.554
+EVALUATOR - Steps per second: 1733.316 | Episode length mean: 13.344 | Episode length std: 3.350 | Episode length min: 5 | Episode length max: 20 | Episode return mean: -13.344 | Episode return std: 3.350 | Episode return min: -20.000 | Episode return max: -5.000
+MISC - Timestep: 3309568 | Elapsed time: 3926.144
+ACTOR - Steps per second: 971.274 | Episode length mean: 14.167 | Episode length std: 3.569 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.167 | Episode return std: 3.569 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.018 | Total loss: 0.420 | Value loss: 0.841
+EVALUATOR - Steps per second: 1999.640 | Episode length mean: 14.406 | Episode length std: 3.622 | Episode length min: 8 | Episode length max: 23 | Episode return mean: -14.406 | Episode return std: 3.622 | Episode return min: -23.000 | Episode return max: -8.000
+MISC - Timestep: 3342336 | Elapsed time: 3959.026
+ACTOR - Steps per second: 1004.736 | Episode length mean: 14.193 | Episode length std: 3.556 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.193 | Episode return std: 3.556 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.410 | Value loss: 0.822
+EVALUATOR - Steps per second: 1908.981 | Episode length mean: 14.031 | Episode length std: 3.495 | Episode length min: 6 | Episode length max: 21 | Episode return mean: -14.031 | Episode return std: 3.495 | Episode return min: -21.000 | Episode return max: -6.000
+MISC - Timestep: 3375104 | Elapsed time: 3993.961
+ACTOR - Steps per second: 955.129 | Episode length mean: 14.183 | Episode length std: 3.551 | Episode length min: 3 | Episode length max: 29 | Episode return mean: -14.183 | Episode return std: 3.551 | Episode return min: -29.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.403 | Value loss: 0.807
+EVALUATOR - Steps per second: 2082.112 | Episode length mean: 14.750 | Episode length std: 3.865 | Episode length min: 6 | Episode length max: 21 | Episode return mean: -14.750 | Episode return std: 3.865 | Episode return min: -21.000 | Episode return max: -6.000
+MISC - Timestep: 3407872 | Elapsed time: 4028.541
+ACTOR - Steps per second: 975.731 | Episode length mean: 14.054 | Episode length std: 3.626 | Episode length min: 5 | Episode length max: 33 | Episode return mean: -14.054 | Episode return std: 3.626 | Episode return min: -33.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.409 | Value loss: 0.819
+EVALUATOR - Steps per second: 1712.606 | Episode length mean: 13.469 | Episode length std: 2.979 | Episode length min: 7 | Episode length max: 22 | Episode return mean: -13.469 | Episode return std: 2.979 | Episode return min: -22.000 | Episode return max: -7.000
+MISC - Timestep: 3440640 | Elapsed time: 4062.816
+ACTOR - Steps per second: 975.922 | Episode length mean: 14.302 | Episode length std: 3.568 | Episode length min: 3 | Episode length max: 29 | Episode return mean: -14.302 | Episode return std: 3.568 | Episode return min: -29.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.412 | Value loss: 0.825
+EVALUATOR - Steps per second: 1691.419 | Episode length mean: 13.750 | Episode length std: 3.000 | Episode length min: 8 | Episode length max: 21 | Episode return mean: -13.750 | Episode return std: 3.000 | Episode return min: -21.000 | Episode return max: -8.000
+MISC - Timestep: 3473408 | Elapsed time: 4097.345
+ACTOR - Steps per second: 957.273 | Episode length mean: 14.166 | Episode length std: 3.597 | Episode length min: 3 | Episode length max: 31 | Episode return mean: -14.166 | Episode return std: 3.597 | Episode return min: -31.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.415 | Value loss: 0.831
+EVALUATOR - Steps per second: 1593.387 | Episode length mean: 14.781 | Episode length std: 3.895 | Episode length min: 8 | Episode length max: 25 | Episode return mean: -14.781 | Episode return std: 3.895 | Episode return min: -25.000 | Episode return max: -8.000
+MISC - Timestep: 3506176 | Elapsed time: 4131.971
+ACTOR - Steps per second: 955.547 | Episode length mean: 14.198 | Episode length std: 3.614 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.198 | Episode return std: 3.614 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.416 | Value loss: 0.833
+EVALUATOR - Steps per second: 1884.206 | Episode length mean: 14.344 | Episode length std: 3.406 | Episode length min: 8 | Episode length max: 21 | Episode return mean: -14.344 | Episode return std: 3.406 | Episode return min: -21.000 | Episode return max: -8.000
+MISC - Timestep: 3538944 | Elapsed time: 4169.747
+ACTOR - Steps per second: 873.996 | Episode length mean: 14.191 | Episode length std: 3.528 | Episode length min: 4 | Episode length max: 30 | Episode return mean: -14.191 | Episode return std: 3.528 | Episode return min: -30.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.402 | Value loss: 0.806
+EVALUATOR - Steps per second: 1887.841 | Episode length mean: 14.312 | Episode length std: 4.042 | Episode length min: 8 | Episode length max: 30 | Episode return mean: -14.312 | Episode return std: 4.042 | Episode return min: -30.000 | Episode return max: -8.000
+MISC - Timestep: 3571712 | Elapsed time: 4211.819
+ACTOR - Steps per second: 784.161 | Episode length mean: 14.098 | Episode length std: 3.534 | Episode length min: 4 | Episode length max: 28 | Episode return mean: -14.098 | Episode return std: 3.534 | Episode return min: -28.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.017 | Total loss: 0.345 | Value loss: 0.692
+EVALUATOR - Steps per second: 1639.886 | Episode length mean: 14.250 | Episode length std: 4.243 | Episode length min: 7 | Episode length max: 23 | Episode return mean: -14.250 | Episode return std: 4.243 | Episode return min: -23.000 | Episode return max: -7.000
+MISC - Timestep: 3604480 | Elapsed time: 4256.722
+ACTOR - Steps per second: 735.077 | Episode length mean: 14.130 | Episode length std: 3.569 | Episode length min: 3 | Episode length max: 32 | Episode return mean: -14.130 | Episode return std: 3.569 | Episode return min: -32.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.016 | Total loss: 0.317 | Value loss: 0.636
+EVALUATOR - Steps per second: 1510.343 | Episode length mean: 14.500 | Episode length std: 4.717 | Episode length min: 7 | Episode length max: 25 | Episode return mean: -14.500 | Episode return std: 4.717 | Episode return min: -25.000 | Episode return max: -7.000
+MISC - Timestep: 3637248 | Elapsed time: 4301.790
+ACTOR - Steps per second: 732.817 | Episode length mean: 14.163 | Episode length std: 3.542 | Episode length min: 4 | Episode length max: 31 | Episode return mean: -14.163 | Episode return std: 3.542 | Episode return min: -31.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.350 | Value loss: 0.701
+EVALUATOR - Steps per second: 1883.027 | Episode length mean: 14.812 | Episode length std: 3.548 | Episode length min: 8 | Episode length max: 23 | Episode return mean: -14.812 | Episode return std: 3.548 | Episode return min: -23.000 | Episode return max: -8.000
+MISC - Timestep: 3670016 | Elapsed time: 4343.936
+ACTOR - Steps per second: 783.042 | Episode length mean: 14.303 | Episode length std: 3.609 | Episode length min: 5 | Episode length max: 32 | Episode return mean: -14.303 | Episode return std: 3.609 | Episode return min: -32.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.373 | Value loss: 0.747
+EVALUATOR - Steps per second: 1686.167 | Episode length mean: 14.125 | Episode length std: 3.248 | Episode length min: 9 | Episode length max: 20 | Episode return mean: -14.125 | Episode return std: 3.248 | Episode return min: -20.000 | Episode return max: -9.000
+MISC - Timestep: 3702784 | Elapsed time: 4386.654
+ACTOR - Steps per second: 780.078 | Episode length mean: 14.069 | Episode length std: 3.417 | Episode length min: 5 | Episode length max: 28 | Episode return mean: -14.069 | Episode return std: 3.417 | Episode return min: -28.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.014 | Total loss: 0.338 | Value loss: 0.677
+EVALUATOR - Steps per second: 1925.741 | Episode length mean: 13.188 | Episode length std: 3.909 | Episode length min: 7 | Episode length max: 27 | Episode return mean: -13.188 | Episode return std: 3.909 | Episode return min: -27.000 | Episode return max: -7.000
+MISC - Timestep: 3735552 | Elapsed time: 4429.911
+ACTOR - Steps per second: 770.418 | Episode length mean: 14.171 | Episode length std: 3.632 | Episode length min: 4 | Episode length max: 29 | Episode return mean: -14.171 | Episode return std: 3.632 | Episode return min: -29.000 | Episode return max: -4.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.015 | Total loss: 0.344 | Value loss: 0.689
+EVALUATOR - Steps per second: 1381.492 | Episode length mean: 12.188 | Episode length std: 3.292 | Episode length min: 7 | Episode length max: 20 | Episode return mean: -12.188 | Episode return std: 3.292 | Episode return min: -20.000 | Episode return max: -7.000
+MISC - Timestep: 3768320 | Elapsed time: 4472.181
+ACTOR - Steps per second: 781.432 | Episode length mean: 14.218 | Episode length std: 3.587 | Episode length min: 5 | Episode length max: 32 | Episode return mean: -14.218 | Episode return std: 3.587 | Episode return min: -32.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.014 | Total loss: 0.338 | Value loss: 0.677
+EVALUATOR - Steps per second: 1705.957 | Episode length mean: 14.375 | Episode length std: 4.628 | Episode length min: 7 | Episode length max: 29 | Episode return mean: -14.375 | Episode return std: 4.628 | Episode return min: -29.000 | Episode return max: -7.000
+MISC - Timestep: 3801088 | Elapsed time: 4507.376
+ACTOR - Steps per second: 939.685 | Episode length mean: 14.165 | Episode length std: 3.484 | Episode length min: 3 | Episode length max: 30 | Episode return mean: -14.165 | Episode return std: 3.484 | Episode return min: -30.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.000 | Entropy: 0.014 | Total loss: 0.337 | Value loss: 0.675
+EVALUATOR - Steps per second: 1991.709 | Episode length mean: 13.969 | Episode length std: 3.592 | Episode length min: 8 | Episode length max: 24 | Episode return mean: -13.969 | Episode return std: 3.592 | Episode return min: -24.000 | Episode return max: -8.000
+MISC - Timestep: 3833856 | Elapsed time: 4542.133
+ACTOR - Steps per second: 949.980 | Episode length mean: 14.156 | Episode length std: 3.521 | Episode length min: 5 | Episode length max: 28 | Episode return mean: -14.156 | Episode return std: 3.521 | Episode return min: -28.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.014 | Total loss: 0.351 | Value loss: 0.703
+EVALUATOR - Steps per second: 1884.871 | Episode length mean: 14.031 | Episode length std: 3.377 | Episode length min: 7 | Episode length max: 25 | Episode return mean: -14.031 | Episode return std: 3.377 | Episode return min: -25.000 | Episode return max: -7.000
+MISC - Timestep: 3866624 | Elapsed time: 4575.057
+ACTOR - Steps per second: 1003.776 | Episode length mean: 14.123 | Episode length std: 3.569 | Episode length min: 5 | Episode length max: 29 | Episode return mean: -14.123 | Episode return std: 3.569 | Episode return min: -29.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.013 | Total loss: 0.335 | Value loss: 0.671
+EVALUATOR - Steps per second: 1904.348 | Episode length mean: 13.969 | Episode length std: 4.412 | Episode length min: 7 | Episode length max: 26 | Episode return mean: -13.969 | Episode return std: 4.412 | Episode return min: -26.000 | Episode return max: -7.000
+MISC - Timestep: 3899392 | Elapsed time: 4609.023
+ACTOR - Steps per second: 972.531 | Episode length mean: 14.153 | Episode length std: 3.518 | Episode length min: 5 | Episode length max: 27 | Episode return mean: -14.153 | Episode return std: 3.518 | Episode return min: -27.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.013 | Total loss: 0.348 | Value loss: 0.697
+EVALUATOR - Steps per second: 1865.271 | Episode length mean: 13.844 | Episode length std: 4.360 | Episode length min: 7 | Episode length max: 27 | Episode return mean: -13.844 | Episode return std: 4.360 | Episode return min: -27.000 | Episode return max: -7.000
+MISC - Timestep: 3932160 | Elapsed time: 4642.165
+ACTOR - Steps per second: 996.960 | Episode length mean: 14.208 | Episode length std: 3.586 | Episode length min: 5 | Episode length max: 31 | Episode return mean: -14.208 | Episode return std: 3.586 | Episode return min: -31.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.013 | Total loss: 0.357 | Value loss: 0.715
+EVALUATOR - Steps per second: 1835.378 | Episode length mean: 13.781 | Episode length std: 2.945 | Episode length min: 8 | Episode length max: 19 | Episode return mean: -13.781 | Episode return std: 2.945 | Episode return min: -19.000 | Episode return max: -8.000
+MISC - Timestep: 3964928 | Elapsed time: 4675.866
+ACTOR - Steps per second: 980.469 | Episode length mean: 14.169 | Episode length std: 3.662 | Episode length min: 3 | Episode length max: 32 | Episode return mean: -14.169 | Episode return std: 3.662 | Episode return min: -32.000 | Episode return max: -3.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.013 | Total loss: 0.349 | Value loss: 0.700
+EVALUATOR - Steps per second: 1869.664 | Episode length mean: 14.875 | Episode length std: 3.814 | Episode length min: 7 | Episode length max: 23 | Episode return mean: -14.875 | Episode return std: 3.814 | Episode return min: -23.000 | Episode return max: -7.000
+MISC - Timestep: 3997696 | Elapsed time: 4710.739
+ACTOR - Steps per second: 947.574 | Episode length mean: 14.193 | Episode length std: 3.623 | Episode length min: 5 | Episode length max: 31 | Episode return mean: -14.193 | Episode return std: 3.623 | Episode return min: -31.000 | Episode return max: -5.000
+TRAINER - Actor loss: -0.001 | Entropy: 0.013 | Total loss: 0.334 | Value loss: 0.670
+EVALUATOR - Steps per second: 1358.829 | Episode length mean: 13.656 | Episode length std: 3.294 | Episode length min: 7 | Episode length max: 23 | Episode return mean: -13.656 | Episode return std: 3.294 | Episode return min: -23.000 | Episode return max: -7.000
+ABSOLUTE - Steps per second: 553.958 | Episode length mean: 13.909 | Episode length std: 3.406 | Episode length min: 4 | Episode length max: 23 | Episode return mean: -13.909 | Episode return std: 3.406 | Episode return min: -23.000 | Episode return max: -4.000
+IPPO experiment completed
