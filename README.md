@@ -5,13 +5,13 @@ The original README of Mava can be found in [https://github.com/instadeepai/Mava
 
 [**Installation**](#installation-) | [**Getting started**](#getting-started-)
 
-Mava allows researchers to experiment with multi-agent reinforcement learning (MARL) at lightning speed. The single-file JAX implementations are built for rapid research iteration - hack, modify, and test new ideas fast. Our [state-of-the-art algorithms][sable] scale seamlessly across devices. Created for researchers, by The Research Team at [InstaDeep](https://www.instadeep.com).
+Mava allows researchers to experiment with multi-agent reinforcement learning (MARL) at lightning speed. The single-file JAX implementations are built for rapid research iteration - hack, modify, and test new ideas fast. Mava's [state-of-the-art algorithms][sable] scale seamlessly across devices. Created for researchers, by The Research Team at [InstaDeep](https://www.instadeep.com).
 
 ----
 
 ## Installation
 
-At the moment Mava is not meant to be installed as a library, but rather to be used as a research tool. We recommend cloning the Mava repo and installing dependencies using [uv](https://github.com/astral-sh/uv) as follows:
+At the moment Mava is not meant to be installed as a library, but rather to be used as a research tool. Mava developers recommend cloning the Mava repo and installing dependencies using [uv](https://github.com/astral-sh/uv) as follows:
 
 ```bash
 # Clone the repository
@@ -28,10 +28,10 @@ Alternatively with pip, create a virtual environment and then:
 pip install -e .
 ```
 
-We have tested `Mava` on Python 3.11 and 3.12, but earlier versions may also work. Specifically, we use Python 3.10 for the Quickstart notebook on Google Colab since Colab uses Python 3.10 by default. Note that because the installation of JAX differs depending on your hardware accelerator,
-we advise users to explicitly install the correct JAX version (see the [official installation guide](https://github.com/google/jax#installation)). For more in-depth installation guides including Docker builds and virtual environments, please see our [detailed installation guide](docs/DETAILED_INSTALL.md).
+Mava developers have tested `Mava` on Python 3.11 and 3.12, but earlier versions may also work. Specifically, they use Python 3.10 for the Quickstart notebook on Google Colab since Colab uses Python 3.10 by default. Note that because the installation of JAX differs depending on your hardware accelerator,
+we advise users to explicitly install the correct JAX version (see the [official installation guide](https://github.com/google/jax#installation)). For more in-depth installation guides including Docker builds and virtual environments, please see their [detailed installation guide](docs/DETAILED_INSTALL.md).
 
-## Getting started ⚡
+## A-MARL: Getting started
 
 To get started with training your first Mava system, simply run one of the system files:
 
@@ -39,23 +39,20 @@ To get started with training your first Mava system, simply run one of the syste
 python mava/systems/ppo/anakin/ff_ippo.py
 ```
 
-Mava makes use of [Hydra](https://github.com/facebookresearch/hydra) for config management. In order to see our default system configs please see the `mava/configs/` directory. A benefit of Hydra is that configs can either be set in config yaml files or overwritten from the terminal on the fly. For an example of running a system on the Level-based Foraging environment, the above code can simply be adapted as follows:
+Mava makes use of [Hydra](https://github.com/facebookresearch/hydra) for config management.
+To run A-MARL (IPPO_SPT: [informed_ff_ippo.py](mava/systems/ppo/anakin/informed_ff_ippo.py)) and MARL (IPPO: [ff_ippo.py](mava/systems/ppo/anakin/ff_ippo.py)) in the JobShop environment, please execute the following commands:
 
 ```bash
-python mava/systems/ppo/anakin/ff_ippo.py env=lbf
 # for running MARL (IPPO)
 python mava/systems/ppo/anakin/ff_ippo.py env=job_shop 
 # for running A-MARL (IPPO+SPT)
 python mava/systems/ppo/anakin/informed_ff_ippo.py env=job_shop
 ```
 
-Different scenarios can also be run by making the following config updates from the terminal:
+In order to see the default system configs please see the `mava/configs/` directory.
+A benefit of Hydra is that configs can either be set in config yaml files or overwritten from the terminal on the fly.
 
-```bash
-python mava/systems/ff_ippo.py env=rware env/scenario=tiny-4ag
-```
-
-Additionally, we also have a [Quickstart notebook][quickstart] that can be used to quickly create and train your first multi-agent system.
+Additionally, Mava developers also have a [Quickstart notebook][quickstart] that can be used to quickly create and train your first multi-agent system.
 
 <h2>Algorithms</h2>
 
@@ -91,44 +88,27 @@ These are the environments which Mava supports _out of the box_, to add a new en
 
 ## Performance and Speed 🚀
 
-Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
+Since this repository is a clone of the original Mava, please refer to the official Mava repository at https://github.com/instadeepai/Mava for the original source and credits.
 
 ## Code Philosophy 🧘
 
-Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
+Since this repository is a clone of the original Mava, please refer to the official Mava repository at https://github.com/instadeepai/Mava for the original source and credits.
 
 ## Contributing 🤝
 
-Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
+Since this repository is a clone of the original Mava, please refer to the official Mava repository at https://github.com/instadeepai/Mava for the original source and credits.
 
 ## Roadmap 🛤️
 
-Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
-
-## See Also 🔎
-
-**InstaDeep's MARL ecosystem in JAX.** In particular, we suggest users check out the following sister repositories:
-
-- 🔌 [OG-MARL](https://github.com/instadeepai/og-marl): datasets with baselines for offline MARL in JAX.
-- 🌴 [Jumanji](https://github.com/instadeepai/jumanji): a diverse suite of scalable reinforcement learning environments in JAX.
-- 😎 [Matrax](https://github.com/instadeepai/matrax): a collection of matrix games in JAX.
-- ⚡ [Flashbax](https://github.com/instadeepai/flashbax): accelerated replay buffers in JAX.
-- 📈 [MARL-eval][marl_eval]: standardised experiment data aggregation and visualisation for MARL.
-
-**Related.** Other libraries related to accelerated MARL in JAX.
-
-- 🦊 [JaxMARL](https://github.com/flairox/jaxmarl): accelerated MARL environments with baselines in JAX.
-- 🌀 [DeepMind Anakin][anakin_paper] for the Anakin podracer architecture to train RL agents at scale.
-- ♟️ [Pgx](https://github.com/sotetsuk/pgx): JAX implementations of classic board games, such as Chess, Go and Shogi.
-- 🔼 [Minimax](https://github.com/facebookresearch/minimax/): JAX implementations of autocurricula baselines for RL.
+Since this repository is a clone of the original Mava, please refer to the official Mava repository at https://github.com/instadeepai/Mava for the original source and credits.
 
 ## Citing Mava 📚
 
-If you use Mava in your work, please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
+Since this repository is a clone of the original Mava, please refer to the official Mava repository at https://github.com/instadeepai/Mava for the original source and credits.
 
 ## Acknowledgements 🙏
 
-Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
+Since this repository is a clone of the original Mava, please refer to the official Mava repository at https://github.com/instadeepai/Mava for the original source and credits.
 
 [Paper]: https://arxiv.org/pdf/2107.01460.pdf
 [quickstart]: https://github.com/instadeepai/Mava/blob/develop/examples/Quickstart.ipynb
