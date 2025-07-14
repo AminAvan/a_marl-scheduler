@@ -396,9 +396,9 @@ def learner_setup(
     init_learner_state = LearnerState(params, opt_states, step_keys, env_states, timesteps, dones)
 
     # Inside learner_setup or wherever init_x is created
-    print(f"init_x type: {type(init_x)}") # add amin
-    print(f"Has agents_view: {hasattr(init_x, 'agents_view')}") # add amin
-    print(f"init_x attributes: {dir(init_x)}") # add amin
+    print(f"init_x type: {type(init_x)}") # added newly
+    print(f"Has agents_view: {hasattr(init_x, 'agents_view')}") # added newly
+    print(f"init_x attributes: {dir(init_x)}") # added newly
 
     return learn, actor_network, init_learner_state
 
@@ -407,11 +407,11 @@ def run_experiment(_config: DictConfig) -> float:
     """Runs experiment."""
     _config.logger.system_name = "ff_ippo"
     config = copy.deepcopy(_config)
-    # print("Full config:")  # add amin
-    # print(OmegaConf.to_yaml(config))  # add amin
-    # print("Pre-torso config:")  # add amin
-    # print(OmegaConf.to_yaml(config.network.actor_network.pre_torso))  # add amin
-    # print("================================")  # add amin
+    # print("Full config:")  # added newly
+    # print(OmegaConf.to_yaml(config))  # added newly
+    # print("Pre-torso config:")  # added newly
+    # print(OmegaConf.to_yaml(config.network.actor_network.pre_torso))  # added newly
+    # print("================================")  # added newly
 
     n_devices = len(jax.devices())
 
@@ -543,9 +543,9 @@ def hydra_entry_point(cfg: DictConfig) -> float:
     # Allow dynamic attributes.
     OmegaConf.set_struct(cfg, False)
     # # right after you get `cfg` from Hydra
-    # print("=== Effective network config ===")   # add amin
-    # print(OmegaConf.to_yaml(cfg.network))   # add amin
-    # print("================================")   # add amin
+    # print("=== Effective network config ===")   # added newly
+    # print(OmegaConf.to_yaml(cfg.network))   # added newly
+    # print("================================")   # added newly
 
 
     # Run experiment.
