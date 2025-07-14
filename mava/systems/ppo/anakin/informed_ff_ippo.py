@@ -212,7 +212,6 @@ def get_learner_fn(
 
             # Decide whether to use SPT based on entropy
             entropy_threshold = entropy_threshold_fraction * max_entropy
-            # entropy_threshold = 0.65 ## good enough - Timestep: 32768 | Elapsed time: 59.932 | Entropy: 0.151
             use_spt = policy_entropy > entropy_threshold
 
             # Sample from policy
@@ -573,9 +572,9 @@ def learner_setup(
     init_learner_state = LearnerState(params, opt_states, step_keys, env_states, timesteps, dones)
 
     # Inside learner_setup or wherever init_x is created
-    print(f"init_x type: {type(init_x)}")  # add amin
-    print(f"Has agents_view: {hasattr(init_x, 'agents_view')}")  # add amin
-    print(f"init_x attributes: {dir(init_x)}")  # add amin
+    print(f"init_x type: {type(init_x)}")  #
+    print(f"Has agents_view: {hasattr(init_x, 'agents_view')}")  #
+    print(f"init_x attributes: {dir(init_x)}")  #
 
     return learn, actor_network, init_learner_state
 
@@ -584,11 +583,11 @@ def run_experiment(_config: DictConfig) -> float:
     """Runs experiment."""
     _config.logger.system_name = "informed_ff_ippo"  # Changed to distinguish from standard ff_ippo
     config = copy.deepcopy(_config)
-    # print("Full config:")  # add amin
-    # print(OmegaConf.to_yaml(config))  # add amin
-    # print("Pre-torso config:")  # add amin
-    # print(OmegaConf.to_yaml(config.network.actor_network.pre_torso))  # add amin
-    # print("================================")  # add amin
+    # print("Full config:")  #
+    # print(OmegaConf.to_yaml(config))  #
+    # print("Pre-torso config:")  #
+    # print(OmegaConf.to_yaml(config.network.actor_network.pre_torso))  #
+    # print("================================")  #
 
     n_devices = len(jax.devices())
 
@@ -647,8 +646,8 @@ def run_experiment(_config: DictConfig) -> float:
     # === MINIMAL ADDITION: Log that we're using entropy-based exploration ===
     print(f"\n{Fore.YELLOW}{'=' * 60}{Style.RESET_ALL}")
     print(f"{Fore.YELLOW}Using ENTROPY-BASED SPT informed exploration{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}SPT is used when policy entropy > 50% of maximum entropy{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}Policy takes over when entropy drops (policy becomes confident){Style.RESET_ALL}")
+    print(f"{Fore.CYAN}SPT is used when (policy-entropy > entropy) threshold{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}Policy takes over when (policy-entropy < entropy) threshold{Style.RESET_ALL}")
     print(f"{Fore.YELLOW}{'=' * 60}{Style.RESET_ALL}\n")
 
     # Run experiment for a total number of evaluations.
@@ -719,7 +718,7 @@ def run_experiment(_config: DictConfig) -> float:
 
 @hydra.main(
     config_path="../../../configs/default",
-    config_name="ff_ippo.yaml",
+    config_name="ff_ippo.yaml", ## A-MARL (informed_ff_ippo.py) has the same configuration as MARL (ff_ippo.py)
     version_base="1.2",
 )
 def hydra_entry_point(cfg: DictConfig) -> float:
@@ -727,9 +726,9 @@ def hydra_entry_point(cfg: DictConfig) -> float:
     # Allow dynamic attributes.
     OmegaConf.set_struct(cfg, False)
     # # right after you get `cfg` from Hydra
-    # print("=== Effective network config ===")   # add amin
-    # print(OmegaConf.to_yaml(cfg.network))   # add amin
-    # print("================================")   # add amin
+    # print("=== Effective network config ===")   #
+    # print(OmegaConf.to_yaml(cfg.network))   #
+    # print("================================")   #
 
     # Run experiment.
     eval_performance = run_experiment(cfg)
