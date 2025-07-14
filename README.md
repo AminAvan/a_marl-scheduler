@@ -159,7 +159,7 @@ Please do follow along as we develop this next phase!
 
 ## Citing Mava 📚
 
-If you use Mava in your work, Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
+If you use Mava in your work, please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
 
 ## Acknowledgements 🙏
 
