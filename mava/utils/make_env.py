@@ -27,7 +27,7 @@ from jumanji.environments.routing.cleaner.generator import (
     RandomGenerator as CleanerRandomGenerator,
 )
 
-## added by amin
+## newly added
 from jumanji.environments.packing.job_shop.generator import (
     RandomGenerator as JobShopRandomGenerator,
 )
@@ -63,7 +63,7 @@ from mava.wrappers import (
     SmaxWrapper,
     UoeWrapper,
     VectorConnectorWrapper,
-    JobShopWrapper, ## added by amin
+    JobShopWrapper, ## newly added
     async_multiagent_worker,
 )
 
