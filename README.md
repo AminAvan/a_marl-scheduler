@@ -33,14 +33,7 @@ we advise users to explicitly install the correct JAX version (see the [official
 
 ## Getting Started with the Paper's Code: Running A-MARL and MARL Methods Mentioned in the Paper
 
-To get started with training your first Mava system, simply run one of the system files:
-
-```bash
-python mava/systems/ppo/anakin/ff_ippo.py
-```
-
-Mava makes use of [Hydra](https://github.com/facebookresearch/hydra) for config management.
-To run A-MARL (IPPO_SPT: [informed_ff_ippo.py](mava/systems/ppo/anakin/informed_ff_ippo.py)) and MARL (IPPO: [ff_ippo.py](mava/systems/ppo/anakin/ff_ippo.py)) in the JobShop environment, please execute the following commands:
+To run the code, start training, and view the results of A-MARL (IPPO_SPT: [informed_ff_ippo.py](mava/systems/ppo/anakin/informed_ff_ippo.py)) and MARL (IPPO: [ff_ippo.py](mava/systems/ppo/anakin/ff_ippo.py)) in the JobShop environment, please execute the following commands:
 
 ```bash
 # for running MARL (IPPO)
