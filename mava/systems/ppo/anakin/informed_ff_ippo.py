@@ -1,4 +1,4 @@
-
+# The code of Agile Multi Agent Reinforcement Learning (A-MARL)
 import copy
 import time
 from typing import Any, Tuple
@@ -30,61 +30,118 @@ from mava.utils.training import make_learning_rate
 from mava.wrappers.episode_metrics import get_final_step_metrics
 
 
-# === MINIMAL ADDITION 1: SPT Heuristic Function ===
+# === SPT Heuristic Function ===
 def get_spt_action_jobshop(observation, num_machines, key):
     """
     SPT (Shortest Processing Time) heuristic for JobShop.
-    Returns action array of shape (num_machines,) with job assignments.
+    Returns action array of shape (batch_size, num_machines) with job assignments.
 
-    For Jumanji JobShop, observation is typically a dict with keys like:
-    'ops_durations', 'ops_mask', 'ops_machine_ids', 'action_mask', etc.
+    Based on Jumanji's JobShop observation structure from types.py:
+    - ops_durations: (num_jobs, max_num_ops) - processing time of each operation
+    - ops_mask: (num_jobs, max_num_ops) - True for operations to be scheduled
+    - ops_machine_ids: (num_jobs, max_num_ops) - machine required for each op
+    - action_mask: (num_machines, num_jobs + 1) - legal actions per machine
     """
-    # Check if this is a JobShop environment by looking for JobShop-specific fields
-    if isinstance(observation, dict):
-        if 'ops_durations' not in observation or 'ops_mask' not in observation:
-            return None
+    # Check if this is a JobShop observation by looking for the expected fields
+    if not (hasattr(observation, 'ops_durations') or
+            (isinstance(observation, dict) and 'ops_durations' in observation)):
+        return None
+
+    # Extract fields based on observation type
+    if hasattr(observation, 'ops_durations'):
+        # Direct attribute access (NamedTuple style)
+        ops_durations = observation.ops_durations
+        ops_mask = observation.ops_mask
+        ops_machine_ids = observation.ops_machine_ids
+        action_mask = observation.action_mask
+    else:
+        # Dictionary access
         ops_durations = observation['ops_durations']
         ops_mask = observation['ops_mask']
         ops_machine_ids = observation['ops_machine_ids']
-        action_mask = observation.get('action_mask', None)
+        action_mask = observation['action_mask']
+
+    # Handle batch dimension - Mava uses batched environments
+    # If ops_durations has shape (batch, num_jobs, max_ops)
+    if len(ops_durations.shape) == 3:
+        batch_size = ops_durations.shape[0]
+        # For simplicity, compute SPT for first environment and broadcast
+        # This is reasonable since parallel environments often start from same state
+        ops_durations_single = ops_durations[0]
+        ops_mask_single = ops_mask[0]
+        ops_machine_ids_single = ops_machine_ids[0]
+        action_mask_single = action_mask[0] if action_mask is not None else None
+
+        # Compute SPT for single environment
+        actions_single = compute_spt_single(
+            ops_durations_single,
+            ops_mask_single,
+            ops_machine_ids_single,
+            action_mask_single,
+            num_machines
+        )
+
+        # Broadcast to all environments in batch
+        # Shape: (batch_size, num_machines)
+        actions = jnp.broadcast_to(actions_single[None, :], (batch_size, num_machines))
+        return actions
     else:
-        # Not a JobShop observation
-        return None
+        # Single environment case
+        actions = compute_spt_single(
+            ops_durations,
+            ops_mask,
+            ops_machine_ids,
+            action_mask,
+            num_machines
+        )
+        # Add batch dimension for consistency
+        return actions[None, :]  # Shape: (1, num_machines)
 
+
+def compute_spt_single(ops_durations, ops_mask, ops_machine_ids, action_mask, num_machines):
+    """Compute SPT for a single environment."""
     num_jobs = ops_durations.shape[0]
-    actions = jnp.full(num_machines, num_jobs, dtype=jnp.int32)
+    actions = jnp.full(num_machines, num_jobs, dtype=jnp.int32)  # Initialize with no-op
 
+    # For each machine, find the job with shortest processing time for its next operation
     for machine_id in range(num_machines):
-        # Find next operation index for each job
-        next_op_idx = jnp.argmax(ops_mask, axis=1)
+        # Find the next operation for each job (first True in ops_mask)
+        next_op_idx = jnp.argmax(ops_mask, axis=1)  # Shape: (num_jobs,)
 
-        # Get machine required for next operation of each job
-        next_op_machine = jnp.take_along_axis(
-            ops_machine_ids, next_op_idx[:, None], axis=1
-        ).squeeze()
+        # Get the machine required for each job's next operation
+        batch_indices = jnp.arange(num_jobs)
+        next_op_machine = ops_machine_ids[batch_indices, next_op_idx]  # Shape: (num_jobs,)
 
-        # Get duration of next operation for each job
-        next_op_duration = jnp.take_along_axis(
-            ops_durations, next_op_idx[:, None], axis=1
-        ).squeeze()
+        # Get the duration of each job's next operation
+        next_op_duration = ops_durations[batch_indices, next_op_idx]  # Shape: (num_jobs,)
 
-        # Check which jobs need this machine and are not completed
-        job_active = jnp.any(ops_mask, axis=1)
-        can_schedule = (next_op_machine == machine_id) & job_active
+        # Check which jobs:
+        # 1. Have operations remaining (any True in ops_mask)
+        # 2. Need the current machine for their next operation
+        job_has_ops = jnp.any(ops_mask, axis=1)  # Shape: (num_jobs,)
+        job_needs_machine = (next_op_machine == machine_id)  # Shape: (num_jobs,)
+
+        # Combine conditions
+        can_schedule = job_has_ops & job_needs_machine  # Shape: (num_jobs,)
 
         # Apply action mask if available
-        if action_mask is not None and action_mask.shape[0] > machine_id:
-            machine_action_mask = action_mask[machine_id]
-            # action_mask includes no-op option, so slice to job indices
-            can_schedule = can_schedule & machine_action_mask[:num_jobs]
+        if action_mask is not None:
+            legal_actions = action_mask[machine_id, :num_jobs]  # Shape: (num_jobs,)
+            can_schedule = can_schedule & legal_actions
 
-        # Set duration to infinity for jobs that can't be scheduled
+        # Find job with minimum duration among those that can be scheduled
         masked_durations = jnp.where(can_schedule, next_op_duration, jnp.inf)
 
-        # Find job with minimum duration
-        if jnp.any(can_schedule):
-            best_job = jnp.argmin(masked_durations)
-            actions = actions.at[machine_id].set(best_job)
+        # Select the job with minimum duration
+        best_job = jnp.argmin(masked_durations)
+
+        # Only update if there's at least one schedulable job
+        has_schedulable = jnp.any(can_schedule)
+        actions = jnp.where(
+            has_schedulable,
+            actions.at[machine_id].set(best_job),
+            actions  # Keep no-op if no job can be scheduled
+        )
 
     return actions
 
@@ -100,12 +157,12 @@ def get_learner_fn(
     actor_apply_fn, critic_apply_fn = apply_fns
     actor_update_fn, critic_update_fn = update_fns
 
-    # === MINIMAL ADDITION 2: Entropy threshold for switching ===
+    # === Entropy threshold for switching ===
     # When entropy drops below this threshold, switch from SPT to policy
     # This threshold should be tuned based on your action space size
     # For discrete actions with N choices, max entropy = log(N)
     # We use a fraction of max entropy as threshold
-    entropy_threshold_fraction = 0.5  # Use policy when entropy < 50% of max
+    # entropy_threshold_fraction = 0.05  # Use policy when entropy < 5% of max (very low threshold)
 
     # Track statistics for logging
     exploration_stats = {"spt_usage_rate": 0.0, "avg_entropy": 0.0}
@@ -148,36 +205,58 @@ def get_learner_fn(
 
             # Estimate max entropy based on action space
             # For discrete actions: max_entropy = log(num_actions)
-            # This is approximate - you might need to adjust based on your specific action space
-            if hasattr(actor_policy, 'logits'):
-                # For categorical distribution
-                num_actions = actor_policy.logits.shape[-1]
-                max_entropy = jnp.log(num_actions)
-            else:
-                # Default estimate
-                max_entropy = 2.0  # Reasonable default for many action spaces
+            # For JobShop with 4 machines and 5 jobs + 1 no-op = 6 choices per machine
+            # Max entropy ≈ log(6) ≈ 1.79 per machine
+            # if hasattr(actor_policy, 'logits'):
+            #     # For categorical distribution
+            #     num_actions = actor_policy.logits.shape[-1]
+            #     max_entropy = jnp.log(num_actions)
+            # else:
+            #     # For JobShop specifically: 4 machines, each can choose from 6 options
+            #     # This is an approximation - actual max entropy depends on distribution
+            #     max_entropy = jnp.log(6.0)  # log(num_jobs + 1)
 
             # Decide whether to use SPT based on entropy
-            entropy_threshold = entropy_threshold_fraction * max_entropy
+            # entropy_threshold = entropy_threshold_fraction * max_entropy
+            entropy_threshold = 0.65 ## good enough - Timestep: 32768 | Elapsed time: 59.932 | Entropy: 0.151
             use_spt = policy_entropy > entropy_threshold
 
             # Sample from policy
             policy_action = actor_policy.sample(seed=policy_key)
 
             # Try to get SPT action (only works for JobShop)
+            # Check if JobShop observation is in extras (common in Mava)
+            jobshop_obs = None
+            if hasattr(last_timestep, 'extras') and 'jobshop_observation' in last_timestep.extras:
+                jobshop_obs = last_timestep.extras['jobshop_observation']
+            else:
+                jobshop_obs = last_timestep.observation
+
             spt_action = get_spt_action_jobshop(
-                last_timestep.observation,
+                jobshop_obs,
                 getattr(config.env, 'num_machines', 4),  # Default to 4 if not specified
                 spt_key
             )
 
             # Select action based on entropy threshold
-            if spt_action is not None and use_spt:
-                action = spt_action
-                spt_usage_count = spt_usage_count + config.arch.num_envs  # Count all parallel envs
+            # We need to handle the case where spt_action might be None
+            # First, check if we got a valid SPT action
+            has_spt_action = spt_action is not None
+
+            if has_spt_action:
+                # Use JAX control flow to select between SPT and policy
+                action = jax.lax.select(use_spt, spt_action, policy_action)
+                # Update usage count conditionally
+                spt_usage_count = jax.lax.select(
+                    use_spt,
+                    spt_usage_count + config.arch.num_envs,
+                    spt_usage_count
+                )
             else:
+                # No SPT action available, use policy action
                 action = policy_action
 
+            # Always update statistics
             total_steps = total_steps + config.arch.num_envs
             entropy_sum = entropy_sum + policy_entropy * config.arch.num_envs
 
