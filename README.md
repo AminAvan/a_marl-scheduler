@@ -159,25 +159,11 @@ Please do follow along as we develop this next phase!
 
 ## Citing Mava 📚
 
-If you use Mava in your work, please cite the accompanying
-[technical report][Paper]:
-
-```bibtex
-@article{dekock2023mava,
-    title={Mava: a research library for distributed multi-agent reinforcement learning in JAX},
-    author={Ruan de Kock and Omayma Mahjoub and Sasha Abramowitz and Wiem Khlifi and Callum Rhys Tilbury
-    and Claude Formanek and Andries P. Smit and Arnu Pretorius},
-    year={2023},
-    journal={arXiv preprint arXiv:2107.01460},
-    url={https://arxiv.org/pdf/2107.01460.pdf},
-}
-```
+If you use Mava in your work, Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
 
 ## Acknowledgements 🙏
 
 Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
-
-The development of Mava was supported with Cloud TPUs from Google's [TPU Research Cloud](https://sites.research.google/trc/about/) (TRC) 🌤.
 
 [Paper]: https://arxiv.org/pdf/2107.01460.pdf
 [quickstart]: https://github.com/instadeepai/Mava/blob/develop/examples/Quickstart.ipynb
