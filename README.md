@@ -43,7 +43,10 @@ Mava makes use of [Hydra](https://github.com/facebookresearch/hydra) for config 
 
 ```bash
 python mava/systems/ppo/anakin/ff_ippo.py env=lbf
-python mava/systems/ppo/anakin/ff_ippo.py env=job_shop
+# for running MARL (IPPO)
+python mava/systems/ppo/anakin/ff_ippo.py env=job_shop 
+# for running A-MARL (IPPO+SPT)
+python mava/systems/ppo/anakin/informed_ff_ippo.py env=job_shop
 ```
 
 Different scenarios can also be run by making the following config updates from the terminal:
