@@ -90,55 +90,20 @@ These are the environments which Mava supports _out of the box_, to add a new en
 | Multi Particle Environments            | Discrete/Continuous | ✅   |       | [Link](https://arxiv.org/abs/1706.02275)  |    [Link](https://github.com/FLAIROx/JaxMARL/tree/main/jaxmarl/environments/mpe)    |            |
 
 ## Performance and Speed 🚀
-We have performed a rigorous benchmark across 45 different scenarios and 6 different environment suites to validate the performance of Mava's algorithm implementations. For more detailed results please see our [Sable paper][sable] and for all hyperparameters, please see the following [website](https://sites.google.com/view/sable-marl).
 
-<p align="center">
-    <a href="docs/images/benchmark_results/rware.png">
-        <img src="docs/images/benchmark_results/rware.png" alt="Mava performance across 15 Robot Warehouse environments" width="30%" style="display:inline-block; margin-right: 10px;"/>
-    </a>
-    <a href="docs/images/benchmark_results/lbf.png">
-        <img src="docs/images/benchmark_results/lbf.png" alt="Mava performance across 7 Level Based Foraging environments" width="30%" style="display:inline-block; margin-right: 10px;"/>
-    </a>
-    <a href="docs/images/benchmark_results/smax.png">
-        <img src="docs/images/benchmark_results/smax.png" alt="Mava performance across 11 Smax environments" width="30%" style="display:inline-block; margin-right: 10px;"/>
-    </a>
-    <a href="docs/images/benchmark_results/connector.png">
-        <img src="docs/images/benchmark_results/connector.png" alt="Mava performance across 4 Conneector environments" width="30%" style="display:inline-block; margin-right: 10px;"/>
-    </a>
-    <a href="docs/images/benchmark_results/mabrax.png">
-        <img src="docs/images/benchmark_results/mabrax.png" alt="Mava performance across 5 MaBrax environments" width="30%" style="display:inline-block; margin-right: 10px;"/>
-    </a>
-    <a href="docs/images/benchmark_results/mpe.png">
-        <img src="docs/images/benchmark_results/mpe.png" alt="Mava performance across 3 Multi-Particle environments" width="30%" style="display:inline-block; margin-right: 10px;"/>
-    </a>
-    <br>
-    <a href="docs/images/benchmark_results/legend.jpg">
-        <img src="docs/images/benchmark_results/legend.jpg" alt="Legend" width="60%" style="display:inline-block; margin-right: 10px;"/>
-    </a>
-    <div style="text-align:center; margin-top: 10px;"> <strong>Mava's algorithm performance:</strong> Each algorithm was tuned for 40 trials with the TPE optimizer and benchmarked over 10 seeds for each scenario. Environments from top left Multi-Robot Warehouse (aggregated over 15 scenarios) Level-based Foraging (aggregated over 7 scenarios) StarCraft Multi-Agent Challenge in JAX (aggregated over 11 scenarios) Connector (aggregated over 4 scenarios) Multi-Agent Brax (aggregated over 5 scenarios) Multi Particle Environments (aggregated over 3 scenarios)</div>
-</p>
+Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
 
 ## Code Philosophy 🧘
 
-The original code in Mava was adapted from [PureJaxRL][purejaxrl] which provides high-quality single-file implementations with research-friendly features. In turn, PureJaxRL is inspired by the code philosophy from [CleanRL][cleanrl]. Along this vein of easy-to-use and understandable RL codebases, Mava is not designed to be a modular library and is not meant to be imported. Our repository focuses on simplicity and clarity in its implementations while utilising the advantages offered by JAX such as `pmap` and `vmap`, making it an excellent resource for researchers and practitioners to build upon. A notable difference between Mava and CleanRL is that Mava creates small utilities for heavily re-used elements, such as networks and logging, we've found that this, in addition to Hydra configs, greatly improves the readability of the algorithms.
+Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
 
 ## Contributing 🤝
 
-Please read our [contributing docs](docs/CONTRIBUTING.md) for details on how to submit pull requests, our Contributor License Agreement and community guidelines.
+Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
 
 ## Roadmap 🛤️
 
-We plan to iteratively expand Mava in the following increments:
-
-- [x] Support for more environments.
-- [x] More robust recurrent systems.
-- [x] Support for non JAX-based environments.
-- [ ] Add Sebulba versions of more algorithms.
-- [x] Support for off-policy algorithms.
-- [x] Continuous action space environments and algorithms.
-- [ ] Allow systems to easily scale across multiple TPUs/GPUs.
-
-Please do follow along as we develop this next phase!
+Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
 
 ## See Also 🔎
 
