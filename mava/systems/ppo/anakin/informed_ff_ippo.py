@@ -162,10 +162,7 @@ def get_learner_fn(
     # This threshold should be tuned based on your action space size
     # For discrete actions with N choices, max entropy = log(N)
     # We use a fraction of max entropy as threshold
-    # entropy_threshold_fraction = 0.05  # Use policy when entropy < 5% of max (very low threshold)
-
-    # Track statistics for logging
-    exploration_stats = {"spt_usage_rate": 0.0, "avg_entropy": 0.0}
+    entropy_threshold_fraction = 0.8  # Use policy when (entropy < 80% of max) and use SPT when (entropy > 80% of max)
 
     def _update_step(learner_state: LearnerState, _: Any) -> Tuple[LearnerState, Tuple]:
         """A single update of the network.
@@ -205,20 +202,17 @@ def get_learner_fn(
 
             # Estimate max entropy based on action space
             # For discrete actions: max_entropy = log(num_actions)
-            # For JobShop with 4 machines and 5 jobs + 1 no-op = 6 choices per machine
-            # Max entropy ≈ log(6) ≈ 1.79 per machine
-            # if hasattr(actor_policy, 'logits'):
-            #     # For categorical distribution
-            #     num_actions = actor_policy.logits.shape[-1]
-            #     max_entropy = jnp.log(num_actions)
-            # else:
-            #     # For JobShop specifically: 4 machines, each can choose from 6 options
-            #     # This is an approximation - actual max entropy depends on distribution
-            #     max_entropy = jnp.log(6.0)  # log(num_jobs + 1)
+            if hasattr(actor_policy, 'logits'):
+                # For categorical distribution
+                num_actions = actor_policy.logits.shape[-1]
+                max_entropy = jnp.log(num_actions)
+            else:
+                # This is an approximation - actual max entropy depends on distribution
+                max_entropy = jnp.log(6.0)  # log(num_jobs + 1)
 
             # Decide whether to use SPT based on entropy
-            # entropy_threshold = entropy_threshold_fraction * max_entropy
-            entropy_threshold = 0.65 ## good enough - Timestep: 32768 | Elapsed time: 59.932 | Entropy: 0.151
+            entropy_threshold = entropy_threshold_fraction * max_entropy
+            # entropy_threshold = 0.65 ## good enough - Timestep: 32768 | Elapsed time: 59.932 | Entropy: 0.151
             use_spt = policy_entropy > entropy_threshold
 
             # Sample from policy
@@ -286,17 +280,6 @@ def get_learner_fn(
         # Extract final statistics
         spt_usage_count, total_steps, entropy_sum = final_carry
 
-        # Update exploration statistics using JAX operations
-        exploration_stats["spt_usage_rate"] = jax.lax.cond(
-            total_steps > 0,
-            lambda: spt_usage_count / total_steps,
-            lambda: 0.0
-        )
-        exploration_stats["avg_entropy"] = jax.lax.cond(
-            total_steps > 0,
-            lambda: entropy_sum / total_steps,
-            lambda: 0.0
-        )
 
         # Calculate advantage
         params, opt_states, key, env_state, last_timestep, last_done = learner_state
@@ -420,8 +403,6 @@ def get_learner_fn(
                     "value_loss": unscaled_value_loss,
                     "actor_loss": actor_loss,
                     "entropy": entropy,
-                    "spt_usage_rate": exploration_stats["spt_usage_rate"],
-                    "avg_policy_entropy": exploration_stats["avg_entropy"],
                 }
                 return (new_params, new_opt_state, entropy_key), loss_info
 
