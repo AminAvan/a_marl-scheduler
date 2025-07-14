@@ -175,7 +175,7 @@ If you use Mava in your work, please cite the accompanying
 
 ## Acknowledgements 🙏
 
-We would like to thank all the authors who contributed to the previous TF version of Mava: Kale-ab Tessera, St John Grimbly, Kevin Eloff, Siphelele Danisa, Lawrence Francis, Jonathan Shock, Herman Kamper, Willie Brink, Herman Engelbrecht, Alexandre Laterre, Karim Beguir. Their contributions can be found in our [TF technical report](https://arxiv.org/pdf/2107.01460v1.pdf).
+Please check the original Mava's repo at [https://github.com/instadeepai/Mava](https://github.com/instadeepai/Mava).
 
 The development of Mava was supported with Cloud TPUs from Google's [TPU Research Cloud](https://sites.research.google/trc/about/) (TRC) 🌤.
 
