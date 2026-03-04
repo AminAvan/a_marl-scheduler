@@ -70,19 +70,6 @@ When entropy surpasses $H_{th}$, agents navigate the state-action space using SP
 
 As training progresses and entropy decreases, [A-MARL](mava/systems/ppo/anakin/informed_ff_ippo.py) seamlessly transitions to **full policy-based exploitation**; combining the benefits of SPT-guided initialization and learned optimization.
 
-## 📊 Results
-
-| Metric | [MARL](mava/systems/ppo/anakin/ff_ippo.py) (Baseline) | **[A-MARL](mava/systems/ppo/anakin/informed_ff_ippo.py)** | Improvement |
-|--------|----------------|-------------------|-------------|
-| Convergence Time | — | — | **61% faster** |
-| Sample Efficiency | — | — | **57% better** |
-| Convergence Time Reduction | — | — | **846.3 seconds** |
-| Value Loss Stability | Moderate | Low & Stable | ✅ Better |
-| Hit-Ratio (Φ) | Baseline | Higher | ✅ Better |
-| Makespan | Baseline | Comparable | ✅ Maintained |
-
-[A-MARL](mava/systems/ppo/anakin/informed_ff_ippo.py) consistently outperforms state-of-the-art baselines across **all evaluated metrics** on representative SRTA scheduling scenarios.
-
 ## Installation
 
 At the moment Mava is not meant to be installed as a library, but rather to be used as a research tool. Mava developers recommend cloning the Mava repo and installing dependencies using [uv](https://github.com/astral-sh/uv) as follows:
