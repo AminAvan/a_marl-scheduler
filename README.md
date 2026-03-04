@@ -1,6 +1,6 @@
 # Agile Multi-Agent Reinforcement Learning (A-MARL)
 
-> Since this repository is a clone of the original Mava, please refer to the official Mava repository at https://github.com/instadeepai/Mava for the original source and credits. Mava allows researchers to experiment with multi-agent reinforcement learning (MARL) at lightning speed. The single-file JAX implementations are built for rapid research iteration - hack, modify, and test new ideas fast. Mava's [state-of-the-art algorithms][sable] scale seamlessly across devices. Created for researchers, by The Research Team at [InstaDeep](https://www.instadeep.com).
+> Since this repository is a clone of the original Mava, please refer to the official Mava repository at https://github.com/instadeepai/Mava for the original source and credits. Mava allows researchers to experiment with multi-agent reinforcement learning (MARL) at lightning speed. The single-file JAX implementations are built for rapid research iteration, modify, and test new ideas fast. Created for researchers, by The Research Team at [InstaDeep](https://www.instadeep.com).
 
 > **Based on the paper:** [A-MARL: Agile Multi-Agent Reinforcement Learning for Soft Real-Time Task Scheduling in Edge Computing (IEEE CASCON 2025)](https://doi-org.uproxy.library.dc-uoit.ca/10.1109/CASCON66301.2025.00053)
 
