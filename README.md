@@ -22,9 +22,9 @@ Conventional heuristic and meta-heuristic approaches struggle to adapt. Single-a
 - **Entropy-Guided Exploration:** Adaptively switches between *SPT-based informed exploration* and *policy-based action selection* depending on current *policy entropy*.
 - **Pseudo-Action Masking:** Prunes the effective *action space* during *high-entropy* phases, focusing exploration on domain-informed (SPT) choices.
 - **Tailored Actor-Critic Architecture:** Fuses a residual MLP for feature embedding with a lightweight self-attention block to capture cross-dependencies between operations and edge resources.
-- **[A-MARL](mava/systems/ppo/anakin/informed_ff_ippo.py) converges 61% faster** Compared to standard [MARL](mava/systems/ppo/anakin/ff_ippo.py) baseline.
-- **[A-MARL](mava/systems/ppo/anakin/informed_ff_ippo.py) achieves 57% better sample efficiency** Fewer environment interactions required to reach comparable solution quality.
-- **[A-MARL](mava/systems/ppo/anakin/informed_ff_ippo.py) reduces convergence-time by 846.3 seconds** Significant practical improvement for real-world deployment.
+- [A-MARL](mava/systems/ppo/anakin/informed_ff_ippo.py) converges 61% faster compared to standard [MARL](mava/systems/ppo/anakin/ff_ippo.py) baseline.
+- [A-MARL](mava/systems/ppo/anakin/informed_ff_ippo.py) achieves 57% better sample efficiency, which means fewer environment interactions required to reach comparable solution quality.
+- [A-MARL](mava/systems/ppo/anakin/informed_ff_ippo.py) reduces convergence-time by 846.3 seconds.
 
 ## Architecture
 
