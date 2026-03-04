@@ -4,6 +4,8 @@
 
 > **Based on the paper:** [A-MARL: Agile Multi-Agent Reinforcement Learning for Soft Real-Time Task Scheduling in Edge Computing (IEEE CASCON 2025)](https://doi-org.uproxy.library.dc-uoit.ca/10.1109/CASCON66301.2025.00053)
 
+> **Presentation Slides:** For a visual overview of EPD please refer to the [Presentation Slides](./SLIDES--A_MARL--IEEECASCON2025.pdf)
+
 ## Overview
 
 Modern **Soft Real-Time Applications (SRTAs)** impose heavy computational demands on embedded devices. Offloading workloads to **Edge Computing (EC)** resources is an attractive solution, but task scheduling remains challenging due to:
